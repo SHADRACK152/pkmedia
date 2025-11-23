@@ -16,7 +16,16 @@ import {
   Pencil,
   Trash2,
   Upload,
-  X
+  X,
+  MessageSquare,
+  Shield,
+  UserCheck,
+  UserX,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  TrendingUp,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +46,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MOCK_ARTICLES, MOCK_STATS, CATEGORIES } from "@/lib/mockData";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function AdminDashboard() {
   const [_, setLocation] = useLocation();
@@ -48,6 +58,21 @@ export default function AdminDashboard() {
   // Mock States for interactivity
   const [articles, setArticles] = useState(MOCK_ARTICLES);
   const [categories, setCategories] = useState(CATEGORIES);
+  
+  // Mock Users Data
+  const [users, setUsers] = useState([
+    { id: 1, name: "Admin User", email: "admin@mknews.com", role: "Admin", status: "Active" },
+    { id: 2, name: "John Editor", email: "john@mknews.com", role: "Editor", status: "Active" },
+    { id: 3, name: "Sarah Writer", email: "sarah@mknews.com", role: "Writer", status: "Inactive" },
+    { id: 4, name: "Mike Intern", email: "mike@mknews.com", role: "Intern", status: "Active" },
+  ]);
+
+  // Mock Comments Data
+  const [comments, setComments] = useState([
+    { id: 1, user: "Alice W.", content: "Great article! Very informative.", article: "Govt Project...", status: "Pending", date: "2 mins ago" },
+    { id: 2, user: "Bob K.", content: "I disagree with this point.", article: "Tech Hubs...", status: "Approved", date: "1 hour ago" },
+    { id: 3, user: "Spam Bot", content: "Click here for free money!!!", article: "Coffee Bonus...", status: "Flagged", date: "3 hours ago" },
+  ]);
 
   const handleSaveArticle = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +134,20 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('categories')}
         >
           <Tags className="mr-2 h-4 w-4" /> Categories
+        </Button>
+        <Button 
+          variant="ghost" 
+          className={`w-full justify-start ${activeTab === 'users' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
+          onClick={() => setActiveTab('users')}
+        >
+          <Users className="mr-2 h-4 w-4" /> Users
+        </Button>
+        <Button 
+          variant="ghost" 
+          className={`w-full justify-start ${activeTab === 'comments' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
+          onClick={() => setActiveTab('comments')}
+        >
+          <MessageSquare className="mr-2 h-4 w-4" /> Comments
         </Button>
         <Button 
           variant="ghost" 
@@ -222,22 +261,54 @@ export default function AdminDashboard() {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="col-span-1 lg:col-span-2">
+                    <CardHeader>
+                        <CardTitle>Traffic Overview</CardTitle>
+                        <CardDescription>Daily unique visitors over the last 30 days</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-64 w-full flex items-end gap-2 justify-between px-2">
+                            {[...Array(30)].map((_, i) => {
+                                const height = Math.floor(Math.random() * 80) + 20;
+                                return (
+                                    <div key={i} className="w-full bg-primary/10 hover:bg-primary/80 transition-colors rounded-t relative group" style={{ height: `${height}%` }}>
+                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                            {height * 12} Visits
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground mt-4 px-2">
+                            <span>30 Days Ago</span>
+                            <span>Today</span>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card>
                     <CardHeader>
                         <CardTitle>Recent Activity</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {[1,2,3].map(i => (
-                                <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                        <div>
-                                            <p className="text-sm font-medium">Article Published</p>
-                                            <p className="text-xs text-muted-foreground">2 hours ago by Admin</p>
-                                        </div>
+                        <div className="space-y-6">
+                            {[
+                                { action: "Article Published", detail: "Tech Hubs Sprouting...", time: "2h ago", icon: CheckCircle2, color: "text-green-500" },
+                                { action: "New User Signup", detail: "james.k@email.com", time: "4h ago", icon: UserCheck, color: "text-blue-500" },
+                                { action: "Comment Flagged", detail: "Spam detected in Sports...", time: "5h ago", icon: AlertCircle, color: "text-red-500" },
+                                { action: "System Backup", detail: "Daily backup completed", time: "12h ago", icon: Shield, color: "text-purple-500" }
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-start gap-4">
+                                    <div className={`mt-1 ${item.color}`}>
+                                        <item.icon className="w-5 h-5" />
                                     </div>
-                                    <Button variant="ghost" size="sm">View</Button>
+                                    <div>
+                                        <p className="font-medium text-sm text-slate-900">{item.action}</p>
+                                        <p className="text-xs text-muted-foreground">{item.detail}</p>
+                                    </div>
+                                    <div className="ml-auto text-xs text-muted-foreground">
+                                        {item.time}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -248,18 +319,42 @@ export default function AdminDashboard() {
                         <CardTitle>System Status</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div className="flex justify-between items-center">
-                                <span className="text-sm">Database</span>
-                                <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">Operational</Badge>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-green-100 text-green-600 rounded-lg">
+                                        <TrendingUp className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">Server Load</p>
+                                        <p className="text-xs text-muted-foreground">Healthy</p>
+                                    </div>
+                                </div>
+                                <span className="text-sm font-bold text-slate-700">12%</span>
                             </div>
                              <div className="flex justify-between items-center">
-                                <span className="text-sm">API Latency</span>
-                                <span className="text-sm font-mono text-muted-foreground">45ms</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                                        <Clock className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">Uptime</p>
+                                        <p className="text-xs text-muted-foreground">Last 30 Days</p>
+                                    </div>
+                                </div>
+                                <span className="text-sm font-bold text-slate-700">99.9%</span>
                             </div>
                              <div className="flex justify-between items-center">
-                                <span className="text-sm">Storage</span>
-                                <span className="text-sm font-mono text-muted-foreground">45% Used</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
+                                        <Shield className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium">Security</p>
+                                        <p className="text-xs text-muted-foreground">No Threats</p>
+                                    </div>
+                                </div>
+                                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">Secure</Badge>
                             </div>
                         </div>
                     </CardContent>
@@ -360,6 +455,112 @@ export default function AdminDashboard() {
                                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                                  </div>
+                              </CardContent>
+                          </Card>
+                      ))}
+                  </div>
+              </div>
+          )}
+
+          {/* USERS TAB */}
+          {activeTab === 'users' && (
+              <div className="space-y-6 animate-in fade-in duration-500">
+                  <div className="flex justify-between items-center">
+                      <h2 className="text-lg font-bold">User Management</h2>
+                      <Button><Plus className="mr-2 h-4 w-4" /> Add User</Button>
+                  </div>
+                  <Card>
+                      <CardContent className="p-0">
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead>User</TableHead>
+                                      <TableHead>Role</TableHead>
+                                      <TableHead>Status</TableHead>
+                                      <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {users.map((user) => (
+                                      <TableRow key={user.id}>
+                                          <TableCell className="flex items-center gap-3">
+                                              <Avatar className="h-8 w-8">
+                                                  <AvatarImage src={`https://i.pravatar.cc/150?u=${user.id}`} />
+                                                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                              </Avatar>
+                                              <div>
+                                                  <p className="font-medium text-sm">{user.name}</p>
+                                                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                                              </div>
+                                          </TableCell>
+                                          <TableCell>
+                                              <Badge variant="outline">{user.role}</Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                  user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-800'
+                                              }`}>
+                                                  <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Active' ? 'bg-green-500' : 'bg-slate-500'}`}></span>
+                                                  {user.status}
+                                              </span>
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                              <Button variant="ghost" size="sm">Edit</Button>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </CardContent>
+                  </Card>
+              </div>
+          )}
+
+          {/* COMMENTS TAB */}
+          {activeTab === 'comments' && (
+              <div className="space-y-6 animate-in fade-in duration-500">
+                  <div className="flex justify-between items-center">
+                      <h2 className="text-lg font-bold">Latest Comments</h2>
+                      <div className="flex gap-2">
+                          <Button variant="outline" size="sm">All</Button>
+                          <Button variant="outline" size="sm" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Button>
+                      </div>
+                  </div>
+                  <div className="space-y-4">
+                      {comments.map((comment) => (
+                          <Card key={comment.id} className={comment.status === 'Flagged' ? 'border-red-200 bg-red-50/30' : ''}>
+                              <CardContent className="p-4">
+                                  <div className="flex justify-between items-start mb-2">
+                                      <div className="flex items-center gap-2">
+                                          <span className="font-bold text-sm">{comment.user}</span>
+                                          <span className="text-xs text-muted-foreground">• {comment.date}</span>
+                                          <span className="text-xs text-muted-foreground">on <span className="text-primary font-medium">{comment.article}</span></span>
+                                      </div>
+                                      <Badge variant={
+                                          comment.status === 'Approved' ? 'default' : 
+                                          comment.status === 'Flagged' ? 'destructive' : 'secondary'
+                                      }>
+                                          {comment.status}
+                                      </Badge>
+                                  </div>
+                                  <p className="text-sm text-slate-700 mb-4 bg-slate-50 p-3 rounded border border-slate-100">
+                                      "{comment.content}"
+                                  </p>
+                                  <div className="flex gap-2 justify-end">
+                                      {comment.status === 'Pending' && (
+                                          <>
+                                              <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200">
+                                                  <CheckCircle2 className="w-4 h-4 mr-1" /> Approve
+                                              </Button>
+                                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">
+                                                  <XCircle className="w-4 h-4 mr-1" /> Reject
+                                              </Button>
+                                          </>
+                                      )}
+                                      <Button size="sm" variant="ghost" className="text-slate-500">
+                                          Reply
+                                      </Button>
                                   </div>
                               </CardContent>
                           </Card>
