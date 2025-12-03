@@ -26,7 +26,7 @@ cloudinary.config({
 });
 
 // Configure multer with Cloudinary
-const storage = new CloudinaryStorage({
+const cloudinaryStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'pkmedia',
@@ -35,7 +35,7 @@ const storage = new CloudinaryStorage({
 });
 
 const upload = multer({
-  storage: storage,
+  storage: cloudinaryStorage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
