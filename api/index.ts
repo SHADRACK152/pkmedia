@@ -1,6 +1,6 @@
 
-import { app } from '../server/app';
-import { registerRoutes } from '../server/routes';
+import { app } from '../server/app.js';
+import { registerRoutes } from '../server/routes.js';
 
 // Cache the initialization promise to ensure it only runs once
 let initPromise: Promise<any> | null = null;

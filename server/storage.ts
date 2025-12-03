@@ -1,6 +1,6 @@
-import { db } from "./db";
-import { users, articles, categories, comments, ads } from "@shared/schema";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment, Ad, InsertAd } from "@shared/schema";
+import { db } from "./db.js";
+import { users, articles, categories, comments, ads } from "@shared/schema.js";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment, Ad, InsertAd } from "@shared/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {

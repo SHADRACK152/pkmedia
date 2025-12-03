@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { callGrok } from "./ai";
-import { insertArticleSchema, insertCategorySchema, insertCommentSchema, insertUserSchema, insertAdSchema } from "@shared/schema";
+import { storage } from "./storage.js";
+import { callGrok } from "./ai.js";
+import { insertArticleSchema, insertCategorySchema, insertCommentSchema, insertUserSchema, insertAdSchema } from "@shared/schema.js";
 import { z } from "zod";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";

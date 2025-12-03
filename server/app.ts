@@ -5,9 +5,9 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import passport from "passport";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import bcrypt from "bcryptjs";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes.js";
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
