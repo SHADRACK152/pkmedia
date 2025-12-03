@@ -22,6 +22,9 @@ export function log(message: string, source = "express") {
 
 export const app = express();
 
+// Trust proxy is required for secure cookies to work behind Vercel/proxies
+app.set("trust proxy", 1);
+
 // Setup session store using Postgres via connect-pg-simple
 const PgSession = connectPgSimple(session as any);
 export const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
