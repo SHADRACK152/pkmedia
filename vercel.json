@@ -2,10 +2,14 @@
   "version": 2,
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{server/**,shared/**}"
+      "includeFiles": "{server/**,shared/**,uploads/**}"
     }
   },
   "rewrites": [
+    {
+      "source": "/uploads/(.*)",
+      "destination": "/api/index.ts"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/index.ts"
