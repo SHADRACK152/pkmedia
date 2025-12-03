@@ -351,6 +351,26 @@ export default function AdminDashboard() {
     setIsAdSheetOpen(true);
   };
 
+  const isVideo = (url: string) => {
+    return url.match(/\.(mp4|webm|mov)$/i) || url.includes('/video/upload/');
+  };
+
+  const MediaItem = ({ media }: { media: any }) => {
+    if (isVideo(media.url)) {
+      return (
+        <video
+          src={media.url}
+          className="w-full h-full object-cover"
+          muted
+          loop
+          onMouseOver={(e) => e.currentTarget.play()}
+          onMouseOut={(e) => e.currentTarget.pause()}
+        />
+      );
+    }
+    return <img src={media.url} alt={media.title} className="w-full h-full object-cover" />;
+  };
+
   const Sidebar = () => (
     <div className="h-full flex flex-col bg-slate-900 text-slate-300 w-64">
       <div className="p-6 border-b border-slate-800 flex items-center gap-3">
@@ -722,7 +742,7 @@ export default function AdminDashboard() {
                         ...ads.filter((a: any) => a.imageUrl).map((a: any) => ({ type: 'ad', id: a.id, url: a.imageUrl, title: a.title, item: a }))
                       ].map((media, i) => (
                           <div key={`${media.type}-${media.id}-${i}`} className="group relative aspect-square bg-slate-100 rounded-lg overflow-hidden border hover:border-primary cursor-pointer">
-                              <img src={media.url} alt={media.title} className="w-full h-full object-cover" />
+                              <MediaItem media={media} />
                               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2 text-center">
                                   <p className="text-white text-xs font-medium line-clamp-2 mb-1">{media.title}</p>
                                   <div className="flex gap-2">
@@ -1174,7 +1194,7 @@ export default function AdminDashboard() {
                 <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
                   <input 
                     type="file" 
-                    accept="image/*"
+                    accept="image/*,video/*"
                     className="absolute inset-0 opacity-0 cursor-pointer"
                     onChange={(e) => {
                       if (e.target.files?.[0]) setUploadedFile(e.target.files[0]);
@@ -1184,7 +1204,7 @@ export default function AdminDashboard() {
                   <p className="text-sm font-medium text-slate-700">
                     {uploadedFile ? uploadedFile.name : "Click to upload or drag and drop"}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Images or Videos (max. 50MB)</p>
                 </div>
               )}
             </div>
@@ -1286,7 +1306,7 @@ export default function AdminDashboard() {
                 <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
                   <input 
                     type="file" 
-                    accept="image/*"
+                    accept="image/*,video/*"
                     className="absolute inset-0 opacity-0 cursor-pointer"
                     onChange={(e) => {
                       if (e.target.files?.[0]) setUploadedFile(e.target.files[0]);
@@ -1296,7 +1316,7 @@ export default function AdminDashboard() {
                   <p className="text-sm font-medium text-slate-700">
                     {uploadedFile ? uploadedFile.name : "Click to upload or drag and drop"}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
+                  <p className="text-xs text-muted-foreground mt-1">Images or Videos (max. 50MB)</p>
                 </div>
               )}
             </div>

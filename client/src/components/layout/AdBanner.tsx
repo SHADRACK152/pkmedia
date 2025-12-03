@@ -26,6 +26,10 @@ export default function AdBanner({ className, format = "auto", label = "Sponsore
     
   console.log(`AdBanner[${location || 'all'}]: Found ${relevantAds.length} ads`);
 
+  const isVideo = (url: string) => {
+    return url.match(/\.(mp4|webm|mov)$/i) || url.includes('/video/upload/');
+  };
+
   if (ad) {
     return (
       <a 
@@ -41,21 +45,32 @@ export default function AdBanner({ className, format = "auto", label = "Sponsore
           className
         )}
       >
-        <img 
-          src={ad.imageUrl} 
-          alt={ad.title} 
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            console.error(`AdBanner: Failed to load image ${ad.imageUrl}`);
-            e.currentTarget.style.display = 'none';
-            e.currentTarget.parentElement?.classList.add('bg-red-100');
-            // Add a text fallback
-            const span = document.createElement('span');
-            span.innerText = `Image failed: ${ad.title}`;
-            span.className = 'text-red-500 p-4 text-sm';
-            e.currentTarget.parentElement?.appendChild(span);
-          }}
-        />
+        {isVideo(ad.imageUrl) ? (
+          <video
+            src={ad.imageUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <img 
+            src={ad.imageUrl} 
+            alt={ad.title} 
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              console.error(`AdBanner: Failed to load image ${ad.imageUrl}`);
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement?.classList.add('bg-red-100');
+              // Add a text fallback
+              const span = document.createElement('span');
+              span.innerText = `Image failed: ${ad.title}`;
+              span.className = 'text-red-500 p-4 text-sm';
+              e.currentTarget.parentElement?.appendChild(span);
+            }}
+          />
+        )}
         <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm z-10">
           {label}
         </div>

@@ -17,16 +17,39 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
     ? formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })
     : 'Just now';
 
+  const isVideo = (url: string) => {
+    return url.match(/\.(mp4|webm|mov)$/i) || url.includes('/video/upload/');
+  };
+
+  const MediaContent = ({ className }: { className: string }) => {
+    if (isVideo(article.image)) {
+      return (
+        <video
+          src={article.image}
+          muted
+          loop
+          playsInline
+          onMouseOver={(e) => e.currentTarget.play()}
+          onMouseOut={(e) => e.currentTarget.pause()}
+          className={className}
+        />
+      );
+    }
+    return (
+      <img 
+        src={article.image} 
+        alt={article.title} 
+        className={className}
+      />
+    );
+  };
+
   if (variant === "hero") {
      return (
       <Link href={`/article/${article.id}`}>
         <div className="group block h-full w-full relative overflow-hidden rounded-2xl shadow-2xl cursor-pointer">
           <div className="absolute inset-0 bg-slate-900/20 group-hover:bg-slate-900/10 transition-colors z-10" />
-          <img 
-            src={article.image} 
-            alt={article.title} 
-            className="w-full h-[500px] object-cover transition-transform duration-1000 group-hover:scale-105"
-          />
+          <MediaContent className="w-full h-[500px] object-cover transition-transform duration-1000 group-hover:scale-105" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-20" />
           
           <div className="absolute bottom-0 left-0 p-8 md:p-12 z-30 w-full md:w-3/4">
@@ -51,11 +74,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
     return (
       <Link href={`/article/${article.id}`}>
         <div className="group block h-full relative overflow-hidden rounded-xl shadow-lg cursor-pointer">
-          <img 
-            src={article.image} 
-            alt={article.title} 
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
+          <MediaContent className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
           <div className="absolute bottom-0 left-0 p-6 text-white z-10">
             <Badge className="mb-2 bg-primary/90 hover:bg-primary border-none text-white text-xs">
@@ -80,11 +99,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
       <Link href={`/article/${article.id}`}>
         <div className="group flex gap-4 items-start p-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
           <div className="w-20 h-20 shrink-0 rounded-md overflow-hidden relative bg-slate-200">
-             <img 
-              src={article.image} 
-              alt={article.title} 
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            />
+             <MediaContent className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1 block">
@@ -108,11 +123,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
       <div className="block h-full group hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
         <Card className="h-full border-none shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white ring-1 ring-slate-900/5">
           <div className="aspect-[16/10] w-full overflow-hidden relative">
-            <img 
-              src={article.image} 
-              alt={article.title} 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
+            <MediaContent className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
             <div className="absolute top-3 left-3">
               <Badge variant="secondary" className="bg-white/95 backdrop-blur hover:bg-white text-slate-900 shadow-sm font-semibold">
                 {article.category}

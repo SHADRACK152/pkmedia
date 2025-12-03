@@ -30,14 +30,15 @@ const cloudinaryStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'pkmedia',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
+    allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp', 'mp4', 'webm', 'mov'],
+    resource_type: 'auto', // Allow both images and videos
   } as any,
 });
 
 const upload = multer({
   storage: cloudinaryStorage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 50 * 1024 * 1024, // 50MB limit for videos
   },
 });
 

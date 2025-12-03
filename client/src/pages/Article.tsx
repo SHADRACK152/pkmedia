@@ -43,6 +43,10 @@ export default function ArticlePage() {
     }
   });
 
+  const isVideo = (url: string) => {
+    return url.match(/\.(mp4|webm|mov)$/i) || url.includes('/video/upload/');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -142,12 +146,21 @@ export default function ArticlePage() {
           </div>
         </div>
 
-        <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-lg mb-8">
-          <img 
-            src={article.image} 
-            alt={article.title} 
-            className="w-full h-full object-cover"
-          />
+        <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-lg mb-8 bg-black">
+          {isVideo(article.image) ? (
+            <video
+              src={article.image}
+              controls
+              autoPlay
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <img 
+              src={article.image} 
+              alt={article.title} 
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
 
         <article className="prose prose-lg prose-blue max-w-none font-serif text-foreground/80">
