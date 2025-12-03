@@ -56,9 +56,17 @@ export default function AdBanner({ className, format = "auto", label = "Sponsore
             e.currentTarget.parentElement?.appendChild(span);
           }}
         />
-        <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm">
+        <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm z-10">
           {label}
         </div>
+        
+        {/* Text Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-12 flex flex-col justify-end">
+          <h3 className="text-white font-bold text-xl leading-tight drop-shadow-md line-clamp-2">
+            {ad.title}
+          </h3>
+        </div>
+
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
       </a>
     );
