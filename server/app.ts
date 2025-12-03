@@ -133,7 +133,7 @@ export default async function runApp(
         username: "admin",
         name: "PKMedia Admin",
         email: "admin@pkmedia.co.ke",
-        password: await bcrypt.hash("Pkmedia@123", 10),
+        password: await bcrypt.hash(process.env.ADMIN_PASSWORD || "Pkmedia@123", 10),
         role: "admin",
       };
       const createdAdmin = await storage.createUser(defaultAdmin as any);
