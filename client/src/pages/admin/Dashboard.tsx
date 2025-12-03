@@ -87,6 +87,10 @@ export default function AdminDashboard() {
     queryKey: ['/api/ads'],
   });
 
+  const { data: trafficStats = [] } = useQuery<any[]>({
+    queryKey: ['/api/analytics/stats'],
+  });
+
   const recentPostsCount = articles.filter((a: any) => {
     if (!a.createdAt) return false;
     const now = new Date();
@@ -579,17 +583,25 @@ export default function AdminDashboard() {
                         <CardDescription>Daily unique visitors over the last 30 days</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-64 w-full flex items-end gap-2 justify-between px-2">
-                            {[...Array(30)].map((_, i) => {
-                                const height = Math.floor(Math.random() * 80) + 20;
+                        <div className="h-64 w-full flex items-end gap-1 justify-between px-2">
+                            {trafficStats.length > 0 ? trafficStats.map((stat: any, i: number) => {
+                                const maxVisitors = Math.max(...trafficStats.map((s: any) => s.visitors), 10); // Scale based on max, min 10
+                                const height = Math.min((stat.visitors / maxVisitors) * 100, 100);
+                                const displayHeight = Math.max(height, 4); // Min height for visibility
+                                
                                 return (
-                                    <div key={i} className="w-full bg-primary/10 hover:bg-primary/80 transition-colors rounded-t relative group" style={{ height: `${height}%` }}>
-                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                            {height * 12} Visits
+                                    <div key={i} className="w-full bg-gradient-to-t from-[#1e3a8a] to-[#60a5fa] hover:from-[#1e40af] hover:to-[#93c5fd] transition-all rounded-t relative group" style={{ height: `${displayHeight}%` }}>
+                                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 shadow-lg">
+                                            <p className="font-bold">{stat.visitors} Visitors</p>
+                                            <p className="text-[10px] opacity-80">{new Date(stat.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
                                         </div>
                                     </div>
                                 );
-                            })}
+                            }) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                                No traffic data available yet.
+                              </div>
+                            )}
                         </div>
                         <div className="flex justify-between text-xs text-muted-foreground mt-4 px-2">
                             <span>30 Days Ago</span>

@@ -106,3 +106,17 @@ export const session = pgTable("session", {
   expire: timestamp("expire", { precision: 6 }).notNull(),
 });
 
+// Daily Stats table
+export const dailyStats = pgTable("daily_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: text("date").notNull().unique(), // Format: YYYY-MM-DD
+  visitors: integer("visitors").default(0).notNull(),
+  pageViews: integer("page_views").default(0).notNull(),
+});
+
+export const insertDailyStatsSchema = createInsertSchema(dailyStats).omit({
+  id: true,
+});
+export type InsertDailyStats = z.infer<typeof insertDailyStatsSchema>;
+export type DailyStats = typeof dailyStats.$inferSelect;
+

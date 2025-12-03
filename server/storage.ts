@@ -1,6 +1,6 @@
 import { db } from "./db.js";
-import { users, articles, categories, comments, ads } from "../shared/schema.js";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment, Ad, InsertAd } from "../shared/schema.js";
+import { users, articles, categories, comments, ads, dailyStats } from "../shared/schema.js";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment, Ad, InsertAd, DailyStats } from "../shared/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -46,6 +46,10 @@ export interface IStorage {
   createAd(ad: InsertAd): Promise<Ad>;
   updateAd(id: string, ad: Partial<InsertAd>): Promise<Ad | undefined>;
   deleteAd(id: string): Promise<boolean>;
+
+  // Analytics operations
+  recordVisit(date: string, isNewVisitor: boolean): Promise<void>;
+  getDailyStats(limit?: number): Promise<DailyStats[]>;
 }
 
 export class Storage implements IStorage {
@@ -253,6 +257,26 @@ export class Storage implements IStorage {
   async deleteAd(id: string): Promise<boolean> {
     const result = await db.delete(ads).where(eq(ads.id, id));
     return result.count > 0;
+  }
+
+  // Analytics operations
+  async recordVisit(date: string, isNewVisitor: boolean): Promise<void> {
+    await db.insert(dailyStats)
+      .values({ date, visitors: isNewVisitor ? 1 : 0, pageViews: 1 })
+      .onConflictDoUpdate({
+        target: dailyStats.date,
+        set: {
+          visitors: sql`${dailyStats.visitors} + ${isNewVisitor ? 1 : 0}`,
+          pageViews: sql`${dailyStats.pageViews} + 1`
+        }
+      });
+  }
+
+  async getDailyStats(limit: number = 30): Promise<DailyStats[]> {
+    return await db.select()
+      .from(dailyStats)
+      .orderBy(desc(dailyStats.date))
+      .limit(limit);
   }
 }
 

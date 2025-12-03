@@ -18,6 +18,7 @@ import Settings from "@/pages/Settings";
 import Chatbot from "@/components/ui/chatbot";
 import ChatPage from "@/pages/Chat";
 import Register from "@/pages/Register";
+import { useEffect } from "react";
 
 function Router() {
   return (
@@ -45,6 +46,11 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    // Record visit
+    fetch('/api/analytics/visit', { method: 'POST' }).catch(err => console.error('Failed to record visit:', err));
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

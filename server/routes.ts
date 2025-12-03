@@ -470,6 +470,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Analytics routes
+  app.post("/api/analytics/visit", async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const isNewVisitor = !(req.session as any).visitedToday;
+      
+      if (isNewVisitor) {
+        (req.session as any).visitedToday = true;
+      }
+      
+      await storage.recordVisit(today, isNewVisitor);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/analytics/stats", requireAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getDailyStats();
+      // Ensure we return 30 days of data, filling in gaps with 0
+      const result = [];
+      const map = new Map(stats.map(s => [s.date, s]));
+      
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const stat = map.get(dateStr) || { date: dateStr, visitors: 0, pageViews: 0 };
+        result.push(stat);
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/health', async (_req, res) => {
     try {
       // try to call an existing storage method to ensure the storage layer can query the database
