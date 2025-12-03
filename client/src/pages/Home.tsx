@@ -1,36 +1,60 @@
-import { useState } from "react";
-import { CATEGORIES, MOCK_ARTICLES } from "@/lib/mockData";
-import ArticleCard from "@/components/news/ArticleCard";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import AdBanner from "@/components/layout/AdBanner";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BreakingNewsTicker from "@/components/layout/Ticker";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ChevronRight, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
+import { Article, Category } from "@shared/schema";
+import ArticleCard from "@/components/news/ArticleCard";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
+  const [visibleCount, setVisibleCount] = useState(6);
 
-  const featuredArticle = MOCK_ARTICLES.find(a => a.featured) || MOCK_ARTICLES[0];
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [activeCategory]);
+
+  const { data: articles = [] } = useQuery<Article[]>({
+    queryKey: ['/api/articles'],
+  });
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+  });
+
+  const featuredArticle = articles.find(a => a.featured) || articles[0];
   const filteredArticles = activeCategory === "All" 
-    ? MOCK_ARTICLES 
-    : MOCK_ARTICLES.filter(a => a.category === activeCategory);
+    ? articles 
+    : articles.filter(a => a.category?.toLowerCase() === activeCategory.toLowerCase());
 
-  // Filter out the featured one from the main grid to avoid duplication if viewing "All"
-  const gridArticles = filteredArticles.filter(a => a.id !== featuredArticle.id);
+  // Show all articles in the grid, even if featured
+  const gridArticles = filteredArticles;
 
   // Latest news (just taking the last 4 for the sidebar)
-  const latestNews = [...MOCK_ARTICLES].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5);
+  const latestNews = [...articles].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      return dateB - dateA;
+  }).slice(0, 5);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <BreakingNewsTicker />
       <Navbar />
       
+      {/* Header Ad */}
+      <div className="container mx-auto px-4 mt-4">
+        <AdBanner location="header" format="horizontal" className="h-24" />
+      </div>
+      
       <main className="flex-1 container mx-auto px-4 py-8">
         
         {/* Hero Section */}
-        {activeCategory === "All" && (
+        {activeCategory === "All" && featuredArticle && (
           <section className="mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <ArticleCard article={featuredArticle} variant="hero" />
           </section>
@@ -44,15 +68,23 @@ export default function Home() {
             {/* Category Filter */}
             <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
                <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar">
-                {CATEGORIES.map(cat => (
+                <Button 
+                  variant={activeCategory === "All" ? "default" : "ghost"}
+                  onClick={() => setActiveCategory("All")}
+                  className={`rounded-full text-sm font-medium transition-all ${activeCategory === "All" ? 'shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}
+                  size="sm"
+                >
+                  All
+                </Button>
+                {categories.map(cat => (
                     <Button 
-                    key={cat} 
-                    variant={activeCategory === cat ? "default" : "ghost"}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`rounded-full text-sm font-medium transition-all ${activeCategory === cat ? 'shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}
+                    key={cat.id} 
+                    variant={activeCategory === cat.name ? "default" : "ghost"}
+                    onClick={() => setActiveCategory(cat.name)}
+                    className={`rounded-full text-sm font-medium transition-all ${activeCategory === cat.name ? 'shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}
                     size="sm"
                     >
-                    {cat}
+                    {cat.name}
                     </Button>
                 ))}
                </div>
@@ -71,7 +103,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {gridArticles.map((article, idx) => (
+              {gridArticles.slice(0, visibleCount).map((article, idx) => (
                 <div key={article.id} className="animate-in fade-in duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
                     <ArticleCard article={article} />
                 </div>
@@ -85,11 +117,18 @@ export default function Home() {
               </div>
             )}
 
-            <div className="mt-12 text-center">
-                 <Button variant="outline" size="lg" className="rounded-full px-8">
-                    Load More Articles
-                 </Button>
-            </div>
+            {visibleCount < gridArticles.length && (
+              <div className="mt-12 text-center">
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    className="rounded-full px-8"
+                    onClick={() => setVisibleCount(prev => prev + 6)}
+                  >
+                      Load More Articles
+                  </Button>
+              </div>
+            )}
           </div>
 
           {/* Sidebar Column */}
@@ -110,9 +149,7 @@ export default function Home() {
                 ))}
               </div>
               <div className="p-3 border-t border-slate-50 text-center">
-                  <Link href="/latest">
-                    <a className="text-xs font-bold text-primary hover:underline uppercase tracking-wide">See All Updates</a>
-                  </Link>
+                  <Link href="/archive" className="text-xs font-bold text-primary hover:underline uppercase tracking-wide">See All Updates</Link>
               </div>
             </div>
 
@@ -142,13 +179,16 @@ export default function Home() {
             </div>
             
             {/* Ad Space / Promo */}
-            <div className="bg-slate-200 rounded-xl h-64 flex items-center justify-center text-slate-400 text-sm font-medium border-2 border-dashed border-slate-300">
-                Advertisement Space
-            </div>
+            <AdBanner location="sidebar" />
 
           </aside>
         </div>
       </main>
+      
+      {/* Footer Ad */}
+      <div className="container mx-auto px-4 mb-8">
+        <AdBanner location="footer" format="horizontal" className="h-24" />
+      </div>
       
       <Footer />
     </div>

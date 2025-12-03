@@ -1,18 +1,59 @@
 import { useRoute } from "wouter";
-import { MOCK_ARTICLES } from "@/lib/mockData";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BreakingNewsTicker from "@/components/layout/Ticker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, User, Share2, Facebook, Twitter, Linkedin, ChevronLeft } from "lucide-react";
+import { Clock, User, Share2, Facebook, Twitter, Linkedin, ChevronLeft, Eye, ThumbsUp, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import { useEffect, useState } from "react";
+import CommentSection from "@/components/news/CommentSection";
 
 export default function ArticlePage() {
   const [match, params] = useRoute("/article/:id");
-  const id = params ? parseInt(params.id) : 0;
-  const article = MOCK_ARTICLES.find(a => a.id === id);
+  const id = params?.id;
+  const [hasLiked, setHasLiked] = useState(false);
+
+  const { data: article, isLoading } = useQuery<any>({
+    queryKey: [`/api/articles/${id}`],
+    enabled: !!id,
+  });
+
+  // Increment view count on mount
+  useEffect(() => {
+    if (id) {
+      const viewedKey = `viewed_article_${id}`;
+      if (!sessionStorage.getItem(viewedKey)) {
+        apiRequest("POST", `/api/articles/${id}/view`);
+        sessionStorage.setItem(viewedKey, "true");
+      }
+    }
+  }, [id]);
+
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/articles/${id}/like`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/articles/${id}`] });
+      setHasLiked(true);
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!article) {
     return (
@@ -38,10 +79,8 @@ export default function ArticlePage() {
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         
         <div className="mb-6">
-          <Link href="/">
-            <a className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
-              <ChevronLeft className="w-4 h-4 mr-1" /> Back to News
-            </a>
+          <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-4 cursor-pointer">
+            <ChevronLeft className="w-4 h-4 mr-1" /> Back to News
           </Link>
           
           <div className="flex gap-2 mb-4">
@@ -61,24 +100,44 @@ export default function ArticlePage() {
               <div>
                 <p className="font-bold text-sm text-foreground">{article.author}</p>
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> {format(new Date(article.timestamp), "MMMM dd, yyyy • h:mm a")}
+                  <Clock className="w-3 h-3" /> {article.createdAt ? format(new Date(article.createdAt), "MMMM dd, yyyy • h:mm a") : 'Just now'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" className="rounded-full w-8 h-8">
-                <Share2 className="w-4 h-4" />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1 text-muted-foreground text-sm mr-2">
+                <Eye className="w-4 h-4" />
+                <span>{article.views || 0} views</span>
+              </div>
+              
+              <Button 
+                variant={hasLiked ? "default" : "outline"} 
+                size="sm" 
+                className="gap-2"
+                onClick={() => !hasLiked && likeMutation.mutate()}
+                disabled={hasLiked}
+              >
+                <ThumbsUp className="w-4 h-4" />
+                {article.likes || 0}
               </Button>
-              <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-blue-600 hover:text-blue-700">
-                <Facebook className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-sky-500 hover:text-sky-600">
-                <Twitter className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-blue-700 hover:text-blue-800">
-                <Linkedin className="w-4 h-4" />
-              </Button>
+
+              <div className="h-6 w-px bg-border mx-2"></div>
+
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" className="rounded-full w-8 h-8">
+                  <Share2 className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-blue-600 hover:text-blue-700">
+                  <Facebook className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-sky-500 hover:text-sky-600">
+                  <Twitter className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-blue-700 hover:text-blue-800">
+                  <Linkedin className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -95,23 +154,12 @@ export default function ArticlePage() {
           <p className="lead text-xl md:text-2xl mb-6 font-light">
             {article.content.substring(0, 150)}...
           </p>
-          <p>
+          <p className="whitespace-pre-wrap">
             {article.content}
           </p>
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-          </p>
-          <h3 className="text-2xl font-bold mt-8 mb-4">Impact on the Community</h3>
-          <p>
-             Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam.
-          </p>
-          <blockquote className="border-l-4 border-primary pl-4 italic my-6 text-lg text-gray-700 bg-gray-50 py-2">
-            "This is a transformative moment for our region. We are seeing changes that will last for generations."
-          </blockquote>
-          <p>
-            Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.
-          </p>
         </article>
+
+        <CommentSection articleId={id} />
 
       </main>
       <Footer />

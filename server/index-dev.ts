@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import "dotenv/config";
 import { type Server } from "node:http";
 import path from "node:path";
 

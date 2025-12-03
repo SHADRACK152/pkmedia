@@ -6,20 +6,38 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
 import Home from "@/pages/Home";
+import Archive from "@/pages/Archive";
 import ArticlePage from "@/pages/Article";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
+import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
+import Settings from "@/pages/Settings";
+import Chatbot from "@/components/ui/chatbot";
+import ChatPage from "@/pages/Chat";
+import Register from "@/pages/Register";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/archive" component={Archive} />
       <Route path="/category/:cat" component={Home} /> {/* Re-use Home for categories for mockup */}
       <Route path="/article/:id" component={ArticlePage} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/login" component={AdminLogin} />
+        <Route path="/register" component={Register} />
       
       {/* Admin Routes */}
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/settings" component={Settings} />
+      <Route path="/chat" component={ChatPage} />
       
       <Route component={NotFound} />
     </Switch>
@@ -31,6 +49,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
+        <Chatbot />
         <Router />
       </TooltipProvider>
     </QueryClientProvider>

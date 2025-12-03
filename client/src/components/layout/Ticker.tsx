@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
-import { MOCK_ARTICLES } from "@/lib/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { Article } from "@shared/schema";
 
 export default function BreakingNewsTicker() {
-  const breakingNews = MOCK_ARTICLES.filter(a => a.isBreaking);
+  const { data: articles = [] } = useQuery<Article[]>({
+    queryKey: ['/api/articles'],
+  });
+  
+  const breakingNews = articles.filter(a => a.isBreaking);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -26,7 +32,7 @@ export default function BreakingNewsTicker() {
               key={currentIndex}
               className="absolute inset-0 animate-in slide-in-from-bottom-2 fade-in duration-500"
             >
-              {breakingNews[currentIndex].title}
+              <Link href={`/article/${breakingNews[currentIndex].id}`} className="hover:underline">{breakingNews[currentIndex].title}</Link>
             </div>
         </div>
       </div>

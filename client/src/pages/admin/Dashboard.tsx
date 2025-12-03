@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Ad } from "@shared/schema";
 import { 
   LayoutDashboard, 
   FileText, 
@@ -25,7 +28,8 @@ import {
   XCircle,
   AlertCircle,
   TrendingUp,
-  Clock
+  Clock,
+  Megaphone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,11 +44,10 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MOCK_ARTICLES, MOCK_STATS, CATEGORIES } from "@/lib/mockData";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -52,59 +55,307 @@ export default function AdminDashboard() {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [isArticleSheetOpen, setIsArticleSheetOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<any>(null);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [imageUploadType, setImageUploadType] = useState<'url' | 'file'>('url');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isAdSheetOpen, setIsAdSheetOpen] = useState(false);
+  const [editingAd, setEditingAd] = useState<Ad | null>(null);
+  const [commentFilter, setCommentFilter] = useState<'all' | 'pending'>('all');
 
-  // Mock States for interactivity
-  const [articles, setArticles] = useState(MOCK_ARTICLES);
-  const [categories, setCategories] = useState(CATEGORIES);
-  
-  // Mock Users Data
-  const [users, setUsers] = useState([
-    { id: 1, name: "Admin User", email: "admin@pkmedia.com", role: "Admin", status: "Active" },
-    { id: 2, name: "John Editor", email: "john@pkmedia.com", role: "Editor", status: "Active" },
-    { id: 3, name: "Sarah Writer", email: "sarah@pkmedia.com", role: "Writer", status: "Inactive" },
-    { id: 4, name: "Mike Intern", email: "mike@pkmedia.com", role: "Intern", status: "Active" },
-  ]);
+  // Real Data Queries
+  const { data: articles = [] } = useQuery<any[]>({
+    queryKey: ['/api/articles'],
+  });
 
-  // Mock Comments Data
-  const [comments, setComments] = useState([
-    { id: 1, user: "Alice W.", content: "Great article! Very informative.", article: "Govt Project...", status: "Pending", date: "2 mins ago" },
-    { id: 2, user: "Bob K.", content: "I disagree with this point.", article: "Tech Hubs...", status: "Approved", date: "1 hour ago" },
-    { id: 3, user: "Spam Bot", content: "Click here for free money!!!", article: "Coffee Bonus...", status: "Flagged", date: "3 hours ago" },
-  ]);
+  const { data: categories = [] } = useQuery<any[]>({
+    queryKey: ['/api/categories'],
+  });
 
-  const handleSaveArticle = (e: React.FormEvent) => {
+  const { data: users = [] } = useQuery<any[]>({
+    queryKey: ['/api/users'],
+  });
+
+  const { data: comments = [] } = useQuery<any[]>({
+    queryKey: ['/api/comments'],
+  });
+
+  const { data: ads = [] } = useQuery<Ad[]>({
+    queryKey: ['/api/ads'],
+  });
+
+  const recentPostsCount = articles.filter((a: any) => {
+    if (!a.createdAt) return false;
+    const now = new Date();
+    const articleDate = new Date(a.createdAt);
+    const diff = now.getTime() - articleDate.getTime();
+    return diff < 24 * 60 * 60 * 1000;
+  }).length;
+
+  const getArticleTitle = (id: string) => {
+    const a = articles.find((art: any) => art.id === id);
+    return a ? a.title : 'Unknown Article';
+  };
+
+  const createArticleMutation = useMutation({
+    mutationFn: async (newArticle: any) => {
+      const res = await apiRequest("POST", "/api/articles", newArticle);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      toast({ title: "Article Published", description: "The article has been created successfully." });
+      setIsArticleSheetOpen(false);
+      setEditingArticle(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const updateArticleMutation = useMutation({
+    mutationFn: async (article: any) => {
+      const res = await apiRequest("PUT", `/api/articles/${article.id}`, article);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      toast({ title: "Article Updated", description: "The changes have been saved successfully." });
+      setIsArticleSheetOpen(false);
+      setEditingArticle(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const deleteArticleMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/articles/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      toast({ title: "Article Deleted", description: "The article has been removed.", variant: "destructive" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/categories", { name });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      toast({ title: "Category Added", description: "New category created." });
+      setNewCategoryName("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/categories/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/categories'] });
+      toast({ title: "Category Deleted", description: "Category removed." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const updateCommentStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: string }) => {
+      const res = await apiRequest("PATCH", `/api/comments/${id}/status`, { status });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/comments'] });
+      toast({ title: "Comment Updated", description: "Status has been changed." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const uploadFileMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include', // Ensure cookies are sent
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Upload failed');
+      }
+      return res.json();
+    }
+  });
+
+  const createAdMutation = useMutation({
+    mutationFn: async (newAd: any) => {
+      const res = await apiRequest("POST", "/api/ads", newAd);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ads'] });
+      toast({ title: "Ad Created", description: "The advertisement has been created successfully." });
+      setIsAdSheetOpen(false);
+      setEditingAd(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const updateAdMutation = useMutation({
+    mutationFn: async (ad: any) => {
+      const res = await apiRequest("PUT", `/api/ads/${ad.id}`, ad);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ads'] });
+      toast({ title: "Ad Updated", description: "The changes have been saved successfully." });
+      setIsAdSheetOpen(false);
+      setEditingAd(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const deleteAdMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/ads/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ads'] });
+      toast({ title: "Ad Deleted", description: "The advertisement has been removed.", variant: "destructive" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would be an API call
-    toast({
-      title: editingArticle ? "Article Updated" : "Article Published",
-      description: "The changes have been saved successfully.",
-    });
-    setIsArticleSheetOpen(false);
-    setEditingArticle(null);
+    const formData = new FormData(e.target as HTMLFormElement);
+    let imageUrl = formData.get('image') as string;
+
+    if (imageUploadType === 'file' && uploadedFile) {
+      try {
+        const uploadRes = await uploadFileMutation.mutateAsync(uploadedFile);
+        imageUrl = uploadRes.url;
+      } catch (err) {
+        toast({ title: "Upload Error", description: "Failed to upload image", variant: "destructive" });
+        return;
+      }
+    }
+
+    const data = {
+      title: formData.get('title'),
+      category: formData.get('category'),
+      author: formData.get('author'),
+      image: imageUrl,
+      content: formData.get('content'),
+      featured: formData.get('featured') === 'on',
+      isBreaking: formData.get('breaking') === 'on',
+    };
+
+    if (editingArticle) {
+      updateArticleMutation.mutate({ ...data, id: editingArticle.id });
+    } else {
+      createArticleMutation.mutate(data);
+    }
   };
 
   const handleDeleteArticle = (id: number) => {
     if (confirm("Are you sure you want to delete this article?")) {
-      setArticles(articles.filter(a => a.id !== id));
-      toast({
-        title: "Article Deleted",
-        description: "The article has been removed.",
-        variant: "destructive"
-      });
+      deleteArticleMutation.mutate(id);
     }
   };
 
   const openArticleEditor = (article?: any) => {
     setEditingArticle(article || null);
+    setImageUploadType('url');
+    setUploadedFile(null);
     setIsArticleSheetOpen(true);
+  };
+
+  const handleAddCategory = () => {
+    if (newCategoryName.trim()) {
+      createCategoryMutation.mutate(newCategoryName);
+    }
+  };
+
+  const handleSaveSettings = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast({ title: "Settings Saved", description: "All changes have been successfully applied." });
+    }, 1000);
+  };
+
+  const handleSaveAd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    let imageUrl = formData.get('imageUrl') as string;
+
+    if (imageUploadType === 'file' && uploadedFile) {
+      try {
+        const uploadRes = await uploadFileMutation.mutateAsync(uploadedFile);
+        imageUrl = uploadRes.url;
+      } catch (err) {
+        toast({ title: "Upload Error", description: "Failed to upload image", variant: "destructive" });
+        return;
+      }
+    }
+
+    const data = {
+      title: formData.get('title'),
+      imageUrl: imageUrl,
+      linkUrl: formData.get('linkUrl'),
+      location: formData.get('location'),
+      active: formData.get('active') === 'on',
+    };
+
+    if (editingAd) {
+      updateAdMutation.mutate({ ...data, id: editingAd.id });
+    } else {
+      createAdMutation.mutate(data);
+    }
+  };
+
+  const handleDeleteAd = (id: string) => {
+    if (confirm("Are you sure you want to delete this ad?")) {
+      deleteAdMutation.mutate(id);
+    }
+  };
+
+  const openAdEditor = (ad?: Ad) => {
+    setEditingAd(ad || null);
+    setImageUploadType('url');
+    setUploadedFile(null);
+    setIsAdSheetOpen(true);
   };
 
   const Sidebar = () => (
     <div className="h-full flex flex-col bg-slate-900 text-slate-300 w-64">
-      <div className="p-6 border-b border-slate-800">
-        <h2 className="text-xl font-bold text-white tracking-tight">MK Admin</h2>
+      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
+        <img src="/pklogo.png" alt="PKMedia logo" className="w-8 h-8 object-contain rounded-sm" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        <h2 className="text-xl font-bold text-white tracking-tight">PKMedia Admin</h2>
       </div>
       <nav className="flex-1 p-4 space-y-2">
         <Button 
@@ -151,6 +402,13 @@ export default function AdminDashboard() {
         </Button>
         <Button 
           variant="ghost" 
+          className={`w-full justify-start ${activeTab === 'ads' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
+          onClick={() => setActiveTab('ads')}
+        >
+          <Megaphone className="mr-2 h-4 w-4" /> Ads
+        </Button>
+        <Button 
+          variant="ghost" 
           className={`w-full justify-start ${activeTab === 'settings' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
           onClick={() => setActiveTab('settings')}
         >
@@ -168,6 +426,36 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
+
+  // Check admin authorization on load
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.status === 200) {
+          const data = await res.json();
+          if (mounted) {
+            setAuthorized(data.user?.role === 'admin');
+            if (data.user?.role !== 'admin') {
+              setLocation('/admin/login');
+            }
+          }
+        } else {
+          if (mounted) {
+            setAuthorized(false);
+            setLocation('/admin/login');
+          }
+        }
+      } catch (err) {
+        if (mounted) {
+          setAuthorized(false);
+          setLocation('/admin/login');
+        }
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="min-h-screen flex bg-slate-50 font-sans">
@@ -191,6 +479,10 @@ export default function AdminDashboard() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="p-0 w-64 border-r-0">
+                  <SheetHeader className="sr-only">
+                    <SheetTitle>Navigation Menu</SheetTitle>
+                    <SheetDescription>Main navigation links for the admin dashboard.</SheetDescription>
+                  </SheetHeader>
                   <Sidebar />
                 </SheetContent>
               </Sheet>
@@ -240,7 +532,7 @@ export default function AdminDashboard() {
                   <CardContent className="p-6 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Active Readers</p>
-                      <h3 className="text-3xl font-bold mt-2">{MOCK_STATS.activeUsers}</h3>
+                      <h3 className="text-3xl font-bold mt-2">1.2k</h3>
                     </div>
                     <div className="p-3 bg-purple-100 rounded-full text-purple-600">
                       <Users className="h-6 w-6" />
@@ -251,7 +543,7 @@ export default function AdminDashboard() {
                   <CardContent className="p-6 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">New Posts (24h)</p>
-                      <h3 className="text-3xl font-bold mt-2">{MOCK_STATS.recentPosts}</h3>
+                      <h3 className="text-3xl font-bold mt-2">{recentPostsCount}</h3>
                     </div>
                     <div className="p-3 bg-orange-100 rounded-full text-orange-600">
                       <BarChart3 className="h-6 w-6" />
@@ -383,6 +675,8 @@ export default function AdminDashboard() {
                       <TableHead>Title</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Author</TableHead>
+                      <TableHead>Views</TableHead>
+                      <TableHead>Likes</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -393,6 +687,8 @@ export default function AdminDashboard() {
                         <TableCell className="font-medium max-w-md truncate">{article.title}</TableCell>
                         <TableCell><Badge variant="outline">{article.category}</Badge></TableCell>
                         <TableCell>{article.author}</TableCell>
+                        <TableCell>{article.views || 0}</TableCell>
+                        <TableCell>{article.likes || 0}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
                             Published
@@ -443,18 +739,34 @@ export default function AdminDashboard() {
                   <div className="flex justify-between items-center">
                       <h2 className="text-lg font-bold">Manage Categories</h2>
                       <div className="flex gap-2">
-                          <Input placeholder="New Category Name" className="w-64" />
-                          <Button><Plus className="mr-2 h-4 w-4" /> Add</Button>
+                          <Input 
+                            placeholder="New Category Name" 
+                            className="w-64" 
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                          />
+                          <Button onClick={handleAddCategory} disabled={createCategoryMutation.isPending}>
+                            <Plus className="mr-2 h-4 w-4" /> Add
+                          </Button>
                       </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {categories.map((cat) => (
-                          <Card key={cat} className="group hover:border-primary transition-colors">
+                      {categories.map((cat: any) => (
+                          <Card key={cat.id} className="group hover:border-primary transition-colors">
                               <CardContent className="p-4 flex justify-between items-center">
-                                  <span className="font-medium">{cat}</span>
+                                  <span className="font-medium">{cat.name}</span>
                                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-8 w-8 text-red-500"
+                                        onClick={() => {
+                                          if(confirm('Delete category?')) deleteCategoryMutation.mutate(cat.id);
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
                                   </div>
                               </CardContent>
                           </Card>
@@ -521,21 +833,41 @@ export default function AdminDashboard() {
           {activeTab === 'comments' && (
               <div className="space-y-6 animate-in fade-in duration-500">
                   <div className="flex justify-between items-center">
-                      <h2 className="text-lg font-bold">Latest Comments</h2>
+                      <h2 className="text-lg font-bold">Latest Comments ({comments.length})</h2>
                       <div className="flex gap-2">
-                          <Button variant="outline" size="sm">All</Button>
-                          <Button variant="outline" size="sm" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Button>
+                          <Button 
+                            variant={commentFilter === 'all' ? 'default' : 'outline'} 
+                            size="sm"
+                            onClick={() => setCommentFilter('all')}
+                          >
+                            All
+                          </Button>
+                          <Button 
+                            variant={commentFilter === 'pending' ? 'default' : 'outline'} 
+                            size="sm" 
+                            className={commentFilter === 'pending' ? "bg-yellow-500 text-white hover:bg-yellow-600" : "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"}
+                            onClick={() => setCommentFilter('pending')}
+                          >
+                            Pending
+                          </Button>
                       </div>
                   </div>
                   <div className="space-y-4">
-                      {comments.map((comment) => (
+                      {comments.length === 0 ? (
+                        <div className="text-center py-10 text-muted-foreground">
+                          No comments found.
+                        </div>
+                      ) : (
+                        comments
+                          .filter((c: any) => commentFilter === 'all' || c.status?.toLowerCase() === 'pending')
+                          .map((comment: any) => (
                           <Card key={comment.id} className={comment.status === 'Flagged' ? 'border-red-200 bg-red-50/30' : ''}>
                               <CardContent className="p-4">
                                   <div className="flex justify-between items-start mb-2">
                                       <div className="flex items-center gap-2">
-                                          <span className="font-bold text-sm">{comment.user}</span>
-                                          <span className="text-xs text-muted-foreground">• {comment.date}</span>
-                                          <span className="text-xs text-muted-foreground">on <span className="text-primary font-medium">{comment.article}</span></span>
+                                          <span className="font-bold text-sm">{comment.userName}</span>
+                                          <span className="text-xs text-muted-foreground">• {new Date(comment.createdAt).toLocaleDateString()}</span>
+                                          <span className="text-xs text-muted-foreground">on <span className="text-primary font-medium">{getArticleTitle(comment.articleId)}</span></span>
                                       </div>
                                       <Badge variant={
                                           comment.status === 'Approved' ? 'default' : 
@@ -548,12 +880,24 @@ export default function AdminDashboard() {
                                       "{comment.content}"
                                   </p>
                                   <div className="flex gap-2 justify-end">
-                                      {comment.status === 'Pending' && (
+                                      {comment.status?.toLowerCase() === 'pending' && (
                                           <>
-                                              <Button size="sm" variant="outline" className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200">
+                                              <Button 
+                                                size="sm" 
+                                                variant="outline" 
+                                                className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                                                onClick={() => updateCommentStatusMutation.mutate({ id: comment.id, status: 'Approved' })}
+                                                disabled={updateCommentStatusMutation.isPending}
+                                              >
                                                   <CheckCircle2 className="w-4 h-4 mr-1" /> Approve
                                               </Button>
-                                              <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">
+                                              <Button 
+                                                size="sm" 
+                                                variant="outline" 
+                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                                                onClick={() => updateCommentStatusMutation.mutate({ id: comment.id, status: 'Flagged' })}
+                                                disabled={updateCommentStatusMutation.isPending}
+                                              >
                                                   <XCircle className="w-4 h-4 mr-1" /> Reject
                                               </Button>
                                           </>
@@ -564,7 +908,8 @@ export default function AdminDashboard() {
                                   </div>
                               </CardContent>
                           </Card>
-                      ))}
+                      ))
+                    )}
                   </div>
               </div>
           )}
@@ -587,12 +932,12 @@ export default function AdminDashboard() {
                               </div>
                               <div className="space-y-2">
                                   <Label htmlFor="contactEmail">Contact Email</Label>
-                                  <Input id="contactEmail" defaultValue="contact@mountkenyanews.com" />
+                                  <Input id="contactEmail" defaultValue="contact@pkmedia.com" />
                               </div>
                           </div>
                           <div className="space-y-2">
                               <Label htmlFor="description">Site Description (Meta)</Label>
-                              <Textarea id="description" defaultValue="Your trusted source for breaking news, politics, business, and sports from Mount Kenya and beyond." />
+                              <Textarea id="description" defaultValue="Your trusted source for breaking news, politics, business, and sports from PKMedia and beyond." />
                           </div>
                       </CardContent>
                   </Card>
@@ -672,15 +1017,66 @@ export default function AdminDashboard() {
                               <Input id="confirm-password" type="password" />
                           </div>
                           <Button 
-                              onClick={() => toast({ title: "Settings Saved", description: "All changes have been successfully applied." })}
+                              onClick={handleSaveSettings}
+                              disabled={isSaving}
                           >
-                              Save All Changes
+                              {isSaving ? "Saving..." : "Save All Changes"}
                           </Button>
                       </CardContent>
                   </Card>
               </div>
           )}
 
+          {/* ADS TAB */}
+          {activeTab === 'ads' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold">Manage Advertisements</h2>
+                <Button className="bg-primary hover:bg-primary/90" onClick={() => openAdEditor()}>
+                  <Plus className="mr-2 h-4 w-4" /> Create Ad
+                </Button>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ads.map((ad) => (
+                      <TableRow key={ad.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <img src={ad.imageUrl} alt={ad.title} className="w-10 h-10 object-cover rounded" />
+                            <span>{ad.title}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell><Badge variant="outline">{ad.location}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant={ad.active ? "default" : "secondary"} className={ad.active ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}>
+                            {ad.active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => openAdEditor(ad)}>
+                            <Pencil className="h-4 w-4 text-blue-600" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteAd(ad.id)}>
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
@@ -689,45 +1085,90 @@ export default function AdminDashboard() {
         <SheetContent side="right" className="w-[100%] sm:w-[600px] overflow-y-auto">
           <SheetHeader className="mb-6">
             <SheetTitle>{editingArticle ? "Edit Article" : "Create New Article"}</SheetTitle>
+            <SheetDescription>
+              {editingArticle ? "Make changes to your article below." : "Fill in the details to publish a new article."}
+            </SheetDescription>
           </SheetHeader>
           <form onSubmit={handleSaveArticle} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Article Title</Label>
-              <Input id="title" defaultValue={editingArticle?.title} placeholder="Enter a catchy headline" required />
+              <Input id="title" name="title" defaultValue={editingArticle?.title} placeholder="Enter a catchy headline" required />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
-                    <Select defaultValue={editingArticle?.category || "Politics"}>
+                    <Select name="category" defaultValue={editingArticle?.category || "Politics"}>
                         <SelectTrigger>
                             <SelectValue placeholder="Select Category" />
                         </SelectTrigger>
                         <SelectContent>
-                            {CATEGORIES.map(cat => (
-                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            {categories.map((cat: any) => (
+                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="author">Author</Label>
-                    <Input id="author" defaultValue={editingArticle?.author} placeholder="Author Name" />
+                    <Input id="author" name="author" defaultValue={editingArticle?.author} placeholder="Author Name" />
                 </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="image">Featured Image URL</Label>
-              <div className="flex gap-2">
-                <Input id="image" defaultValue={editingArticle?.image} placeholder="https://..." />
-                <Button type="button" variant="outline" size="icon"><Upload className="h-4 w-4" /></Button>
+            <div className="space-y-3">
+              <Label>Featured Image</Label>
+              <div className="flex gap-4 mb-2">
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    id="type-url" 
+                    checked={imageUploadType === 'url'} 
+                    onChange={() => setImageUploadType('url')}
+                    className="accent-primary"
+                  />
+                  <Label htmlFor="type-url" className="cursor-pointer font-normal">Image URL</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    id="type-file" 
+                    checked={imageUploadType === 'file'} 
+                    onChange={() => setImageUploadType('file')}
+                    className="accent-primary"
+                  />
+                  <Label htmlFor="type-file" className="cursor-pointer font-normal">Upload from Computer</Label>
+                </div>
               </div>
+
+              {imageUploadType === 'url' ? (
+                <div className="flex gap-2">
+                  <Input id="image" name="image" defaultValue={editingArticle?.image} placeholder="https://..." />
+                  <Button type="button" variant="outline" size="icon"><ImageIcon className="h-4 w-4" /></Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) setUploadedFile(e.target.files[0]);
+                    }}
+                  />
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium text-slate-700">
+                    {uploadedFile ? uploadedFile.name : "Click to upload or drag and drop"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="content">Content</Label>
               <Textarea 
                 id="content" 
+                name="content"
                 defaultValue={editingArticle?.content} 
                 placeholder="Write your article here..." 
                 className="min-h-[300px] font-serif"
@@ -736,11 +1177,11 @@ export default function AdminDashboard() {
 
             <div className="flex items-center gap-8 p-4 bg-slate-50 rounded-lg border">
                 <div className="flex items-center gap-2">
-                    <Switch id="featured" defaultChecked={editingArticle?.featured} />
+                    <Switch id="featured" name="featured" defaultChecked={editingArticle?.featured} />
                     <Label htmlFor="featured">Featured Story</Label>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Switch id="breaking" defaultChecked={editingArticle?.isBreaking} />
+                    <Switch id="breaking" name="breaking" defaultChecked={editingArticle?.isBreaking} />
                     <Label htmlFor="breaking" className="text-red-600 font-bold">Breaking News</Label>
                 </div>
             </div>
@@ -750,6 +1191,106 @@ export default function AdminDashboard() {
                     {editingArticle ? "Update Article" : "Publish Article"}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => setIsArticleSheetOpen(false)}>
+                    Cancel
+                </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      {/* Ad Editor Sheet */}
+      <Sheet open={isAdSheetOpen} onOpenChange={setIsAdSheetOpen}>
+        <SheetContent side="right" className="w-[100%] sm:w-[600px] overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle>{editingAd ? "Edit Advertisement" : "Create New Ad"}</SheetTitle>
+            <SheetDescription>
+              {editingAd ? "Update ad details below." : "Create a new advertisement placement."}
+            </SheetDescription>
+          </SheetHeader>
+          <form onSubmit={handleSaveAd} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="ad-title">Ad Title (Internal)</Label>
+              <Input id="ad-title" name="title" defaultValue={editingAd?.title} placeholder="e.g. Summer Sale Banner" required />
+            </div>
+            
+            <div className="space-y-2">
+                <Label htmlFor="ad-location">Location</Label>
+                <Select name="location" defaultValue={editingAd?.location || "sidebar"}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select Location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="sidebar">Sidebar</SelectItem>
+                        <SelectItem value="header">Header</SelectItem>
+                        <SelectItem value="footer">Footer</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Ad Image</Label>
+              <div className="flex gap-4 mb-2">
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    id="ad-type-url" 
+                    checked={imageUploadType === 'url'} 
+                    onChange={() => setImageUploadType('url')}
+                    className="accent-primary"
+                  />
+                  <Label htmlFor="ad-type-url" className="cursor-pointer font-normal">Image URL</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="radio" 
+                    id="ad-type-file" 
+                    checked={imageUploadType === 'file'} 
+                    onChange={() => setImageUploadType('file')}
+                    className="accent-primary"
+                  />
+                  <Label htmlFor="ad-type-file" className="cursor-pointer font-normal">Upload</Label>
+                </div>
+              </div>
+
+              {imageUploadType === 'url' ? (
+                <div className="flex gap-2">
+                  <Input id="ad-imageUrl" name="imageUrl" defaultValue={editingAd?.imageUrl} placeholder="https://..." />
+                  <Button type="button" variant="outline" size="icon"><ImageIcon className="h-4 w-4" /></Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) setUploadedFile(e.target.files[0]);
+                    }}
+                  />
+                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium text-slate-700">
+                    {uploadedFile ? uploadedFile.name : "Click to upload or drag and drop"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">SVG, PNG, JPG or GIF (max. 5MB)</p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ad-linkUrl">Target URL</Label>
+              <Input id="ad-linkUrl" name="linkUrl" defaultValue={editingAd?.linkUrl} placeholder="https://example.com/promo" required />
+            </div>
+
+            <div className="flex items-center gap-2 p-4 bg-slate-50 rounded-lg border">
+                <Switch id="ad-active" name="active" defaultChecked={editingAd?.active !== false} />
+                <Label htmlFor="ad-active">Active</Label>
+            </div>
+
+            <div className="flex gap-4 pt-4 border-t">
+                <Button type="submit" className="flex-1">
+                    {editingAd ? "Update Ad" : "Create Ad"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setIsAdSheetOpen(false)}>
                     Cancel
                 </Button>
             </div>

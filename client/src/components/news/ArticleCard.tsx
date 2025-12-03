@@ -1,4 +1,4 @@
-import { Article } from "@/lib/mockData";
+import { Article } from "@shared/schema";
 import { Link } from "wouter";
 import { Clock, User, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -11,12 +11,16 @@ interface ArticleCardProps {
 }
 
 export default function ArticleCard({ article, variant = "default" }: ArticleCardProps) {
-  const timeAgo = formatDistanceToNow(new Date(article.timestamp), { addSuffix: true });
+  if (!article) return null;
+  
+  const timeAgo = article.createdAt 
+    ? formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })
+    : 'Just now';
 
   if (variant === "hero") {
      return (
       <Link href={`/article/${article.id}`}>
-        <a className="group block h-full w-full relative overflow-hidden rounded-2xl shadow-2xl">
+        <div className="group block h-full w-full relative overflow-hidden rounded-2xl shadow-2xl cursor-pointer">
           <div className="absolute inset-0 bg-slate-900/20 group-hover:bg-slate-900/10 transition-colors z-10" />
           <img 
             src={article.image} 
@@ -32,15 +36,13 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
             <h2 className="text-3xl md:text-5xl font-serif font-bold text-white leading-tight mb-4 drop-shadow-sm group-hover:text-primary-foreground/90 transition-colors">
               {article.title}
             </h2>
-            <p className="text-gray-200 text-lg mb-6 line-clamp-2 md:line-clamp-none max-w-2xl">
-              {article.content}
-            </p>
+            {/* Content removed as per user request to only show heading */}
             <div className="flex items-center gap-6 text-sm text-gray-300 font-medium">
               <span className="flex items-center gap-2"><User className="w-4 h-4 text-primary" /> {article.author}</span>
               <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> {timeAgo}</span>
             </div>
           </div>
-        </a>
+        </div>
       </Link>
      );
   }
@@ -48,7 +50,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
   if (variant === "featured") {
     return (
       <Link href={`/article/${article.id}`}>
-        <a className="group block h-full relative overflow-hidden rounded-xl shadow-lg">
+        <div className="group block h-full relative overflow-hidden rounded-xl shadow-lg cursor-pointer">
           <img 
             src={article.image} 
             alt={article.title} 
@@ -68,7 +70,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
               <span>{timeAgo}</span>
             </div>
           </div>
-        </a>
+        </div>
       </Link>
     );
   }
@@ -76,7 +78,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
   if (variant === "compact") {
     return (
       <Link href={`/article/${article.id}`}>
-        <a className="group flex gap-4 items-start p-3 rounded-lg hover:bg-slate-50 transition-colors">
+        <div className="group flex gap-4 items-start p-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
           <div className="w-20 h-20 shrink-0 rounded-md overflow-hidden relative bg-slate-200">
              <img 
               src={article.image} 
@@ -95,7 +97,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
                 <Clock className="w-3 h-3" /> {timeAgo}
               </div>
           </div>
-        </a>
+        </div>
       </Link>
     );
   }
@@ -103,7 +105,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
   // Default Card
   return (
     <Link href={`/article/${article.id}`}>
-      <a className="block h-full group hover:-translate-y-1 transition-transform duration-300">
+      <div className="block h-full group hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
         <Card className="h-full border-none shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white ring-1 ring-slate-900/5">
           <div className="aspect-[16/10] w-full overflow-hidden relative">
             <img 
@@ -136,7 +138,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
             </span>
           </CardFooter>
         </Card>
-      </a>
+      </div>
     </Link>
   );
 }

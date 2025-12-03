@@ -1,19 +1,41 @@
 import { Link, useLocation } from "wouter";
-import { Menu, Search, User, X } from "lucide-react";
-import { useState } from "react";
+import { Menu, Search, User, X, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useQuery } from "@tanstack/react-query";
+import { Category } from "@shared/schema";
 
 export default function Navbar() {
   const [location] = useLocation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['/api/categories'],
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((r) => {
+        if (!mounted) return;
+        if (!r.ok) return setUser(null);
+        return r.json();
+      })
+      .then((data) => {
+        if (data && data.user) setUser(data.user);
+      })
+      .catch(() => {
+        if (mounted) setUser(null);
+      });
+
+    return () => { mounted = false; };
+  }, []);
 
   const navLinks = [
     { name: "Home", href: "/" },
-    { name: "Politics", href: "/category/politics" },
-    { name: "Business", href: "/category/business" },
-    { name: "Sports", href: "/category/sports" },
-    { name: "Tech", href: "/category/tech" },
+    ...categories.slice(0, 5).map(c => ({ name: c.name, href: `/category/${c.name}` }))
   ];
 
   return (
@@ -31,39 +53,29 @@ export default function Navbar() {
             <SheetContent side="left">
               <nav className="flex flex-col gap-4 mt-8">
                 {navLinks.map((link) => (
-                  <Link key={link.name} href={link.href}>
-                    <a className={`text-lg font-medium ${location === link.href ? 'text-primary' : 'text-foreground'}`}>
+                  <Link key={link.name} href={link.href} className={`text-lg font-medium ${location === link.href ? 'text-primary' : 'text-foreground'}`}>
                       {link.name}
-                    </a>
                   </Link>
                 ))}
-                <Link href="/admin/login">
-                  <a className="text-lg font-medium text-muted-foreground mt-4">Admin Login</a>
-                </Link>
+                {/* Admin login link intentionally hidden from regular users. Admins navigate to /admin/login directly when needed. */}
               </nav>
             </SheetContent>
           </Sheet>
         </div>
 
-        {/* Logo */}
-        <Link href="/">
-          <a className="flex items-center gap-2">
-            <div className="bg-primary text-white p-1 rounded-sm">
-              <span className="font-serif font-bold text-xl tracking-tighter">PK</span>
-            </div>
-            <span className="font-serif font-bold text-xl hidden sm:block text-primary">
-              PK<span className="text-accent">Media</span>
+        {/* Logo (uses /pklogo.png if available in client/public) */}
+            <Link href="/" className="flex items-center gap-2">
+            <img src="/pklogo.png" alt="PKMedia logo" className="h-8 w-auto rounded-sm" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+            <span className="font-serif font-bold text-xl hidden sm:block text-accent-blue-dark">
+              PK<span className="text-accent-blue">Media</span>
             </span>
-          </a>
-        </Link>
+          </Link>
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <Link key={link.name} href={link.href}>
-              <a className={`text-sm font-semibold uppercase tracking-wide hover:text-primary transition-colors ${location === link.href ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
-                {link.name}
-              </a>
+                {navLinks.map((link) => (
+            <Link key={link.name} href={link.href} className={`text-sm font-semibold uppercase tracking-wide hover:text-primary transition-colors ${location === link.href ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
+              {link.name}
             </Link>
           ))}
         </nav>
@@ -73,11 +85,38 @@ export default function Navbar() {
           <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)}>
             <Search className="h-5 w-5" />
           </Button>
-          <Link href="/admin/login">
-            <Button variant="ghost" size="icon" title="Admin Login">
-              <User className="h-5 w-5" />
+          <Link href="/chat">
+            <Button variant="ghost" size="icon" title="Chat">
+              <MessageCircle className="h-5 w-5" />
             </Button>
           </Link>
+          {/* Chat floating button is rendered globally in App - removed from Navbar */}
+            {!user && (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm" className="hidden sm:inline">Login</Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="ghost" size="sm" className="hidden sm:inline">Register</Button>
+                </Link>
+              </>
+            )}
+
+            {user && (
+              <>
+                <Link href="/settings">
+                  <Button variant="ghost" size="sm" className="hidden sm:inline">Settings</Button>
+                </Link>
+                {/* Show Admin Dashboard link only for admin users */}
+                {(user as any).role === 'admin' && (
+                  <Link href="/admin/dashboard">
+                    <Button variant="ghost" size="icon" title="Admin Dashboard">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                )}
+              </>
+            )}
         </div>
       </div>
       

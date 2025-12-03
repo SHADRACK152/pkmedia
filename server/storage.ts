@@ -1,13 +1,18 @@
 import { db } from "./db";
-import { users, articles, categories, comments } from "@shared/schema";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { users, articles, categories, comments, ads } from "@shared/schema";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment, Ad, InsertAd } from "@shared/schema";
+import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByRole(role: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  getUsersByRole(role: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
   
   // Article operations
   getAllArticles(): Promise<Article[]>;
@@ -15,6 +20,8 @@ export interface IStorage {
   createArticle(article: InsertArticle): Promise<Article>;
   updateArticle(id: string, article: Partial<InsertArticle>): Promise<Article | undefined>;
   deleteArticle(id: string): Promise<boolean>;
+  incrementArticleViews(id: string): Promise<void>;
+  incrementArticleLikes(id: string): Promise<void>;
   
   // Category operations
   getAllCategories(): Promise<Category[]>;
@@ -27,6 +34,18 @@ export interface IStorage {
   createComment(comment: InsertComment): Promise<Comment>;
   updateCommentStatus(id: string, status: string): Promise<Comment | undefined>;
   deleteComment(id: string): Promise<boolean>;
+  incrementCommentLikes(id: string): Promise<void>;
+  decrementCommentLikes(id: string): Promise<void>;
+  incrementCommentDislikes(id: string): Promise<void>;
+  decrementCommentDislikes(id: string): Promise<void>;
+  incrementCommentShares(id: string): Promise<void>;
+
+  // Ad operations
+  getAllAds(): Promise<Ad[]>;
+  getActiveAds(): Promise<Ad[]>;
+  createAd(ad: InsertAd): Promise<Ad>;
+  updateAd(id: string, ad: Partial<InsertAd>): Promise<Ad | undefined>;
+  deleteAd(id: string): Promise<boolean>;
 }
 
 export class Storage implements IStorage {
@@ -41,8 +60,35 @@ export class Storage implements IStorage {
     return user;
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return user;
+  }
+
+  async getUserByRole(role: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.role, role)).limit(1);
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(users.createdAt);
+  }
+
+  async getUsersByRole(role: string): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, role)).orderBy(users.createdAt);
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUser(id: string, updateData: Partial<InsertUser>): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...updateData })
+      .where(eq(users.id, id))
+      .returning();
     return user;
   }
 
@@ -72,7 +118,25 @@ export class Storage implements IStorage {
 
   async deleteArticle(id: string): Promise<boolean> {
     const result = await db.delete(articles).where(eq(articles.id, id));
-    return result.rowCount > 0;
+    return result.count > 0;
+  }
+
+  async incrementArticleViews(id: string): Promise<void> {
+    await db
+      .update(articles)
+      .set({ 
+        views: sql`${articles.views} + 1` 
+      })
+      .where(eq(articles.id, id));
+  }
+
+  async incrementArticleLikes(id: string): Promise<void> {
+    await db
+      .update(articles)
+      .set({ 
+        likes: sql`${articles.likes} + 1` 
+      })
+      .where(eq(articles.id, id));
   }
 
   // Category operations
@@ -87,7 +151,7 @@ export class Storage implements IStorage {
 
   async deleteCategory(id: string): Promise<boolean> {
     const result = await db.delete(categories).where(eq(categories.id, id));
-    return result.rowCount > 0;
+    return result.count > 0;
   }
 
   // Comment operations
@@ -115,7 +179,80 @@ export class Storage implements IStorage {
 
   async deleteComment(id: string): Promise<boolean> {
     const result = await db.delete(comments).where(eq(comments.id, id));
-    return result.rowCount > 0;
+    return result.count > 0;
+  }
+
+  async incrementCommentLikes(id: string): Promise<void> {
+    await db
+      .update(comments)
+      .set({ 
+        likes: sql`${comments.likes} + 1` 
+      })
+      .where(eq(comments.id, id));
+  }
+
+  async decrementCommentLikes(id: string): Promise<void> {
+    await db
+      .update(comments)
+      .set({ 
+        likes: sql`GREATEST(${comments.likes} - 1, 0)` 
+      })
+      .where(eq(comments.id, id));
+  }
+
+  async incrementCommentDislikes(id: string): Promise<void> {
+    await db
+      .update(comments)
+      .set({ 
+        dislikes: sql`${comments.dislikes} + 1` 
+      })
+      .where(eq(comments.id, id));
+  }
+
+  async decrementCommentDislikes(id: string): Promise<void> {
+    await db
+      .update(comments)
+      .set({ 
+        dislikes: sql`GREATEST(${comments.dislikes} - 1, 0)` 
+      })
+      .where(eq(comments.id, id));
+  }
+
+  async incrementCommentShares(id: string): Promise<void> {
+    await db
+      .update(comments)
+      .set({ 
+        shares: sql`${comments.shares} + 1` 
+      })
+      .where(eq(comments.id, id));
+  }
+
+  // Ad operations
+  async getAllAds(): Promise<Ad[]> {
+    return await db.select().from(ads).orderBy(desc(ads.createdAt));
+  }
+
+  async getActiveAds(): Promise<Ad[]> {
+    return await db.select().from(ads).where(eq(ads.active, true)).orderBy(desc(ads.createdAt));
+  }
+
+  async createAd(insertAd: InsertAd): Promise<Ad> {
+    const [ad] = await db.insert(ads).values(insertAd).returning();
+    return ad;
+  }
+
+  async updateAd(id: string, updateData: Partial<InsertAd>): Promise<Ad | undefined> {
+    const [ad] = await db
+      .update(ads)
+      .set({ ...updateData })
+      .where(eq(ads.id, id))
+      .returning();
+    return ad;
+  }
+
+  async deleteAd(id: string): Promise<boolean> {
+    const result = await db.delete(ads).where(eq(ads.id, id));
+    return result.count > 0;
   }
 }
 
