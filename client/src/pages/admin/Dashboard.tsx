@@ -91,6 +91,11 @@ export default function AdminDashboard() {
     queryKey: ['/api/analytics/stats'],
   });
 
+  const { data: systemStatus } = useQuery<any>({
+    queryKey: ['/api/system/status'],
+    refetchInterval: 30000, // Refresh every 30s
+  });
+
   const recentPostsCount = articles.filter((a: any) => {
     if (!a.createdAt) return false;
     const now = new Date();
@@ -103,6 +108,69 @@ export default function AdminDashboard() {
     const a = articles.find((art: any) => art.id === id);
     return a ? a.title : 'Unknown Article';
   };
+
+  // Combine all activities for the feed
+  const recentActivity = [
+    ...articles.map((a: any) => ({ 
+      type: 'article', 
+      action: 'Article Published', 
+      detail: a.title, 
+      time: a.createdAt, 
+      icon: FileText, 
+      color: 'text-blue-500' 
+    })),
+    ...users.map((u: any) => ({ 
+      type: 'user', 
+      action: 'New User Signup', 
+      detail: u.email, 
+      time: u.createdAt, 
+      icon: UserCheck, 
+      color: 'text-green-500' 
+    })),
+    ...comments.map((c: any) => ({ 
+      type: 'comment', 
+      action: c.status === 'Flagged' ? 'Comment Flagged' : 'New Comment', 
+      detail: c.content.substring(0, 30) + (c.content.length > 30 ? '...' : ''), 
+      time: c.createdAt, 
+      icon: c.status === 'Flagged' ? AlertCircle : MessageSquare, 
+      color: c.status === 'Flagged' ? 'text-red-500' : 'text-slate-500' 
+    })),
+    ...ads.map((a: any) => ({ 
+      type: 'ad', 
+      action: 'Ad Created', 
+      detail: a.title, 
+      time: a.createdAt, 
+      icon: Megaphone, 
+      color: 'text-purple-500' 
+    }))
+  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
+  const formatUptime = (seconds: number) => {
+    if (!seconds) return '0m';
+    const days = Math.floor(seconds / (3600 * 24));
+    const hours = Math.floor((seconds % (3600 * 24)) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  const flaggedCommentsCount = comments.filter((c: any) => c.status === 'Flagged').length;
 
   const createArticleMutation = useMutation({
     mutationFn: async (newArticle: any) => {
@@ -616,12 +684,7 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-6">
-                            {[
-                                { action: "Article Published", detail: "Tech Hubs Sprouting...", time: "2h ago", icon: CheckCircle2, color: "text-green-500" },
-                                { action: "New User Signup", detail: "james.k@email.com", time: "4h ago", icon: UserCheck, color: "text-blue-500" },
-                                { action: "Comment Flagged", detail: "Spam detected in Sports...", time: "5h ago", icon: AlertCircle, color: "text-red-500" },
-                                { action: "System Backup", detail: "Daily backup completed", time: "12h ago", icon: Shield, color: "text-purple-500" }
-                            ].map((item, i) => (
+                            {recentActivity.length > 0 ? recentActivity.map((item, i) => (
                                 <div key={i} className="flex items-start gap-4">
                                     <div className={`mt-1 ${item.color}`}>
                                         <item.icon className="w-5 h-5" />
@@ -631,10 +694,12 @@ export default function AdminDashboard() {
                                         <p className="text-xs text-muted-foreground">{item.detail}</p>
                                     </div>
                                     <div className="ml-auto text-xs text-muted-foreground">
-                                        {item.time}
+                                        {formatTimeAgo(item.time)}
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                              <div className="text-center text-muted-foreground py-4">No recent activity</div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
@@ -651,10 +716,12 @@ export default function AdminDashboard() {
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium">Server Load</p>
-                                        <p className="text-xs text-muted-foreground">Healthy</p>
+                                        <p className="text-xs text-muted-foreground">Memory Usage</p>
                                     </div>
                                 </div>
-                                <span className="text-sm font-bold text-slate-700">12%</span>
+                                <span className="text-sm font-bold text-slate-700">
+                                  {systemStatus ? `${systemStatus.memoryUsage} MB` : '...'}
+                                </span>
                             </div>
                              <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
@@ -663,22 +730,26 @@ export default function AdminDashboard() {
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium">Uptime</p>
-                                        <p className="text-xs text-muted-foreground">Last 30 Days</p>
+                                        <p className="text-xs text-muted-foreground">Since last restart</p>
                                     </div>
                                 </div>
-                                <span className="text-sm font-bold text-slate-700">99.9%</span>
+                                <span className="text-sm font-bold text-slate-700">
+                                  {systemStatus ? formatUptime(systemStatus.uptime) : '...'}
+                                </span>
                             </div>
                              <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-orange-100 text-orange-600 rounded-lg">
+                                    <div className={`p-2 rounded-lg ${flaggedCommentsCount > 0 ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
                                         <Shield className="w-4 h-4" />
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium">Security</p>
-                                        <p className="text-xs text-muted-foreground">No Threats</p>
+                                        <p className="text-xs text-muted-foreground">Flagged Content</p>
                                     </div>
                                 </div>
-                                <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">Secure</Badge>
+                                <Badge variant="outline" className={flaggedCommentsCount > 0 ? "text-red-600 bg-red-50 border-red-200" : "text-green-600 bg-green-50 border-green-200"}>
+                                  {flaggedCommentsCount > 0 ? `${flaggedCommentsCount} Threats` : 'Secure'}
+                                </Badge>
                             </div>
                         </div>
                     </CardContent>

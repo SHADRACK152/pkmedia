@@ -13,6 +13,7 @@ import fs from "fs";
 import express from "express";
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import os from "os";
 
 // Configure Cloudinary
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
@@ -516,6 +517,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err: any) {
       res.status(500).json({ ok: false, error: err.message });
     }
+  });
+
+  app.get("/api/system/status", requireAdmin, (req, res) => {
+    const uptime = process.uptime();
+    const memory = process.memoryUsage();
+    const load = os.loadavg();
+    
+    res.json({
+        uptime,
+        memoryUsage: Math.round(memory.heapUsed / 1024 / 1024), // MB
+        totalMemory: Math.round(os.totalmem() / 1024 / 1024), // MB
+        load: load[0] || 0,
+        platform: os.platform()
+    });
   });
 
   // Chatbot endpoint (PKBoot) - very lightweight and rule-based.
