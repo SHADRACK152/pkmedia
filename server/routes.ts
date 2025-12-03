@@ -11,22 +11,31 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import express from "express";
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-// Configure multer
+// Configure Cloudinary
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  console.warn("Cloudinary environment variables not set. Uploads will fail.");
+}
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure multer with Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'pkmedia',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
+  } as any,
+});
+
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadDir = path.join(process.cwd(), "uploads");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    },
-  }),
+  storage: storage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
@@ -103,7 +112,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
-    const fileUrl = `/uploads/${req.file.filename}`;
+    // Cloudinary storage puts the url in req.file.path
+    const fileUrl = req.file.path;
     res.json({ url: fileUrl });
   });
 
