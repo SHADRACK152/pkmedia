@@ -715,20 +715,45 @@ export default function AdminDashboard() {
               <div className="space-y-6 animate-in fade-in duration-500">
                   <div className="flex justify-between items-center">
                       <h2 className="text-lg font-bold">Media Library</h2>
-                      <Button>
-                          <Upload className="mr-2 h-4 w-4" /> Upload New
-                      </Button>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {[1,2,3,4,5,6,7,8].map((i) => (
-                          <div key={i} className="group relative aspect-square bg-slate-100 rounded-lg overflow-hidden border hover:border-primary cursor-pointer">
-                              <img src={`https://picsum.photos/seed/${i}/300/300`} alt="Media" className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                  <Button variant="secondary" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
-                                  <Button variant="destructive" size="icon" className="h-8 w-8"><Trash2 className="h-4 w-4" /></Button>
+                      {[
+                        ...articles.filter((a: any) => a.image).map((a: any) => ({ type: 'article', id: a.id, url: a.image, title: a.title, item: a })),
+                        ...ads.filter((a: any) => a.imageUrl).map((a: any) => ({ type: 'ad', id: a.id, url: a.imageUrl, title: a.title, item: a }))
+                      ].map((media, i) => (
+                          <div key={`${media.type}-${media.id}-${i}`} className="group relative aspect-square bg-slate-100 rounded-lg overflow-hidden border hover:border-primary cursor-pointer">
+                              <img src={media.url} alt={media.title} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2 text-center">
+                                  <p className="text-white text-xs font-medium line-clamp-2 mb-1">{media.title}</p>
+                                  <div className="flex gap-2">
+                                    <Button 
+                                        variant="secondary" 
+                                        size="icon" 
+                                        className="h-8 w-8"
+                                        onClick={() => media.type === 'article' ? openArticleEditor(media.item) : openAdEditor(media.item)}
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                        variant="destructive" 
+                                        size="icon" 
+                                        className="h-8 w-8"
+                                        onClick={() => media.type === 'article' ? handleDeleteArticle(media.item.id) : handleDeleteAd(media.item.id)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                  <Badge variant="outline" className="text-white border-white/50 mt-2 text-[10px] h-5">
+                                    {media.type === 'article' ? 'Article' : 'Ad'}
+                                  </Badge>
                               </div>
                           </div>
                       ))}
+                      {articles.length === 0 && ads.length === 0 && (
+                          <div className="col-span-full text-center py-10 text-muted-foreground">
+                              No media found.
+                          </div>
+                      )}
                   </div>
               </div>
           )}
