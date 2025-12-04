@@ -4,6 +4,7 @@ import { Clock, User, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { createArticleSlug } from "@/lib/utils";
 
 interface ArticleCardProps {
   article: Article;
@@ -13,6 +14,7 @@ interface ArticleCardProps {
 export default function ArticleCard({ article, variant = "default" }: ArticleCardProps) {
   if (!article) return null;
   
+  const articleSlug = createArticleSlug(article.title, article.id);
   const timeAgo = article.createdAt 
     ? formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })
     : 'Just now';
@@ -46,7 +48,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
 
   if (variant === "hero") {
      return (
-      <Link href={`/article/${article.id}`}>
+      <Link href={`/article/${articleSlug}`}>
         <div className="group block h-full w-full relative overflow-hidden rounded-xl shadow-2xl cursor-pointer bg-slate-900">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/90 z-10" />
           <MediaContent className="w-full h-[550px] object-cover transition-transform duration-1000 group-hover:scale-105 opacity-90" />
@@ -79,7 +81,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
 
   if (variant === "featured") {
     return (
-      <Link href={`/article/${article.id}`}>
+      <Link href={`/article/${articleSlug}`}>
         <div className="group block h-full relative overflow-hidden rounded-xl shadow-lg cursor-pointer">
           <MediaContent className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
@@ -103,7 +105,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
 
   if (variant === "compact") {
     return (
-      <Link href={`/article/${article.id}`}>
+      <Link href={`/article/${articleSlug}`}>
         <div className="group flex gap-4 items-start p-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
           <div className="w-20 h-20 shrink-0 rounded-md overflow-hidden relative bg-slate-200">
              <MediaContent className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
@@ -126,7 +128,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
 
   // Default Card
   return (
-    <Link href={`/article/${article.id}`}>
+    <Link href={`/article/${articleSlug}`}>
       <div className="block h-full group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
         <Card className="h-full border-0 shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col bg-white">
           <div className="aspect-[16/10] w-full overflow-hidden relative bg-slate-100">

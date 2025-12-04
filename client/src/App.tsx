@@ -27,7 +27,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/archive" component={Archive} />
       <Route path="/category/:cat" component={Home} /> {/* Re-use Home for categories for mockup */}
-      <Route path="/article/:id" component={ArticlePage} />
+      <Route path="/article/:slug" component={ArticlePage} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
       <Route path="/privacy" component={Privacy} />

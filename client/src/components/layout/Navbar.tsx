@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { Category, Article } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
+import { createArticleSlug } from "@/lib/utils";
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
@@ -82,12 +83,13 @@ export default function Navbar() {
   };
 
   // Navigate to article
-  const goToArticle = (articleId: number) => {
+  const goToArticle = (article: Article) => {
+    const slug = createArticleSlug(article.title, article.id);
     saveSearch(searchQuery);
     setIsSearchOpen(false);
     setSearchQuery("");
     setSearchResults([]);
-    setLocation(`/article/${articleId}`);
+    setLocation(`/article/${slug}`);
   };
 
   // Clear recent searches
@@ -226,7 +228,7 @@ export default function Navbar() {
                     searchResults.map(article => (
                       <div
                         key={article.id}
-                        onClick={() => goToArticle(article.id)}
+                        onClick={() => goToArticle(article)}
                         className="p-4 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors border border-slate-100 group"
                       >
                         <div className="flex gap-3">

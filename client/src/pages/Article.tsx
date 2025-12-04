@@ -13,15 +13,17 @@ import { useEffect, useState } from "react";
 import CommentSection from "@/components/news/CommentSection";
 import ShareButtons from "@/components/news/ShareButtons";
 import { Helmet } from 'react-helmet-async';
+import { extractIdFromSlug } from "@/lib/utils";
 
 export default function ArticlePage() {
-  const [match, params] = useRoute("/article/:id");
-  const id = params?.id;
+  const [match, params] = useRoute("/article/:slug");
+  const slug = params?.slug;
+  const id = slug ? extractIdFromSlug(slug) : null;
   const [hasLiked, setHasLiked] = useState(false);
 
   const { data: article, isLoading, error } = useQuery<any>({
     queryKey: [`/api/articles/${id}`],
-    enabled: !!id,
+    enabled: !!id && id !== 'undefined',
   });
 
   // Increment view count on mount
@@ -77,7 +79,7 @@ export default function ArticlePage() {
     );
   }
 
-  const articleUrl = `/article/${article.id}`;
+  const articleUrl = `/article/${slug}`;
   const articleDescription = article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
 
   return (
