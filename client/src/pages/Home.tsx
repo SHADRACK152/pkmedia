@@ -26,7 +26,13 @@ export default function Home() {
     queryKey: ['/api/categories'],
   });
 
-  const featuredArticle = articles.find(a => a.featured) || articles[0];
+  // Always show the most recent article in hero section
+  const featuredArticle = [...articles].sort((a, b) => {
+    const dateA = new Date(a.createdAt || 0).getTime();
+    const dateB = new Date(b.createdAt || 0).getTime();
+    return dateB - dateA;
+  })[0];
+
   const filteredArticles = activeCategory === "All" 
     ? articles 
     : articles.filter(a => a.category?.toLowerCase() === activeCategory.toLowerCase());
