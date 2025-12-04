@@ -5,7 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BreakingNewsTicker from "@/components/layout/Ticker";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ChevronRight, TrendingUp } from "lucide-react";
+import { ArrowRight, ChevronRight, TrendingUp, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { Article, Category } from "@shared/schema";
 import ArticleCard from "@/components/news/ArticleCard";
@@ -48,22 +48,23 @@ export default function Home() {
   }).slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col font-sans">
       <BreakingNewsTicker />
       <Navbar />
       
       {/* Header Ad */}
-      <div className="container mx-auto px-4 mt-4">
+      <div className="container mx-auto px-4 mt-6">
         <AdBanner location="header" format="horizontal" className="h-24" />
       </div>
       
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-10">
         
         {/* Hero Section - Magazine Style */}
         {activeCategory === "All" && featuredArticle && (
-          <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="lg:col-span-2">
+          <section className="mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 w-72 h-72 bg-primary/5 rounded-full blur-3xl"></div>
+              <div className="relative">
                 <ArticleCard article={featuredArticle} variant="hero" />
               </div>
             </div>
@@ -76,12 +77,12 @@ export default function Home() {
           <div className="lg:col-span-8">
             
             {/* Category Filter */}
-            <div className="flex items-center justify-between mb-6 pb-3 border-b-2 border-slate-900">
-               <div className="flex overflow-x-auto pb-2 gap-3 no-scrollbar">
+            <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-slate-900/10">
+               <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar">
                 <Button 
                   variant={activeCategory === "All" ? "default" : "ghost"}
                   onClick={() => setActiveCategory("All")}
-                  className={`rounded-full text-sm font-medium transition-all ${activeCategory === "All" ? 'shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}
+                  className={`rounded-full text-sm font-semibold transition-all ${activeCategory === "All" ? 'shadow-lg shadow-primary/20' : 'text-slate-600 hover:bg-slate-100'}`}
                   size="sm"
                 >
                   All
@@ -91,7 +92,7 @@ export default function Home() {
                     key={cat.id} 
                     variant={activeCategory === cat.name ? "default" : "ghost"}
                     onClick={() => setActiveCategory(cat.name)}
-                    className={`rounded-full text-sm font-medium transition-all ${activeCategory === cat.name ? 'shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}
+                    className={`rounded-full text-sm font-semibold transition-all whitespace-nowrap ${activeCategory === cat.name ? 'shadow-lg shadow-primary/20' : 'text-slate-600 hover:bg-slate-100'}`}
                     size="sm"
                     >
                     {cat.name}
@@ -100,42 +101,52 @@ export default function Home() {
                </div>
             </div>
 
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl md:text-3xl font-serif font-black text-slate-900 flex items-center gap-3">
-                <span className="w-1 h-8 bg-primary"></span>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl md:text-4xl font-serif font-black text-slate-900 flex items-center gap-3">
+                <span className="w-1.5 h-10 bg-gradient-to-b from-primary to-primary/50 rounded-full"></span>
                 {activeCategory === "All" ? "Latest Stories" : activeCategory}
               </h2>
               <Link href="/archive">
-                 <Button variant="ghost" className="text-primary hover:text-primary/80 hidden sm:flex">
-                    View All <ChevronRight className="w-4 h-4 ml-1" />
+                 <Button variant="ghost" className="text-primary hover:text-primary/80 font-semibold hidden sm:flex items-center gap-1 group">
+                    View All 
+                    <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                  </Button>
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {gridArticles.slice(0, visibleCount).map((article, idx) => (
-                <div key={article.id} className="animate-in fade-in duration-500" style={{ animationDelay: `${idx * 50}ms` }}>
+                <div key={article.id} className="animate-in fade-in duration-500 hover:scale-[1.02] transition-transform" style={{ animationDelay: `${idx * 50}ms` }}>
                     <ArticleCard article={article} />
                 </div>
               ))}
             </div>
             
             {gridArticles.length === 0 && (
-              <div className="py-24 text-center bg-white rounded-xl border border-dashed">
-                <p className="text-muted-foreground">No articles found in this category.</p>
-                <Button variant="link" onClick={() => setActiveCategory("All")}>View all news</Button>
+              <div className="py-32 text-center bg-white rounded-2xl border-2 border-dashed border-slate-200">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">No Articles Found</h3>
+                  <p className="text-muted-foreground mb-6">We couldn't find any articles in this category.</p>
+                  <Button variant="default" onClick={() => setActiveCategory("All")} className="rounded-full">
+                    View All News
+                  </Button>
+                </div>
               </div>
             )}
 
             {visibleCount < gridArticles.length && (
-              <div className="mt-12 text-center">
+              <div className="mt-16 text-center">
                   <Button 
                     variant="outline" 
                     size="lg" 
-                    className="rounded-full px-8"
+                    className="rounded-full px-10 py-6 text-base font-semibold shadow-sm hover:shadow-md transition-all"
                     onClick={() => setVisibleCount(prev => prev + 6)}
                   >
                       Load More Articles
+                      <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
               </div>
             )}
@@ -145,45 +156,45 @@ export default function Home() {
           <aside className="lg:col-span-4 space-y-8">
             
             {/* Latest News Widget */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden sticky top-24">
-              <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-primary" />
+            <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden sticky top-24 hover:shadow-xl transition-shadow">
+              <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
+                <h3 className="font-bold text-slate-900 flex items-center gap-2 text-lg">
+                    <TrendingUp className="w-5 h-5 text-primary" />
                     Latest Updates
                 </h3>
-                <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">Live</span>
+                <span className="text-xs font-bold text-white bg-red-500 px-3 py-1 rounded-full animate-pulse shadow-lg shadow-red-500/30">LIVE</span>
               </div>
-              <div className="p-2">
+              <div className="p-3">
                 {latestNews.map(article => (
                   <ArticleCard key={article.id} article={article} variant="compact" />
                 ))}
               </div>
-              <div className="p-3 border-t border-slate-50 text-center">
-                  <Link href="/archive" className="text-xs font-bold text-primary hover:underline uppercase tracking-wide">See All Updates</Link>
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 text-center">
+                  <Link href="/archive" className="text-sm font-bold text-primary hover:text-primary/80 hover:underline uppercase tracking-wide transition-colors">View All Updates →</Link>
               </div>
             </div>
 
             {/* Newsletter */}
-            <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white p-8 text-center shadow-xl">
-              <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-primary rounded-full opacity-20 blur-2xl"></div>
-              <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-32 h-32 bg-blue-500 rounded-full opacity-20 blur-2xl"></div>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-10 text-center shadow-2xl">
+              <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-primary rounded-full opacity-20 blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-40 h-40 bg-blue-500 rounded-full opacity-20 blur-3xl"></div>
               
-              <h3 className="text-2xl font-serif font-bold mb-3 relative z-10">The Morning Brief</h3>
-              <p className="text-slate-300 mb-6 relative z-10 text-sm leading-relaxed">
+              <h3 className="text-2xl md:text-3xl font-serif font-bold mb-4 relative z-10">📰 The Morning Brief</h3>
+              <p className="text-slate-300 mb-8 relative z-10 text-sm leading-relaxed max-w-sm mx-auto">
                 Start your day with the most important stories from PKMedia.
               </p>
               
-              <div className="relative z-10 space-y-3">
+              <div className="relative z-10 space-y-4">
                 <input 
                     type="email" 
                     placeholder="Your email address" 
-                    className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary text-sm backdrop-blur-sm" 
+                    className="w-full px-5 py-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm backdrop-blur-sm transition-all" 
                 />
-                <Button className="w-full bg-primary hover:bg-primary/90 font-bold py-6 shadow-lg shadow-primary/25">
-                    Subscribe Free
+                <Button className="w-full bg-primary hover:bg-primary/90 font-bold py-6 shadow-xl shadow-primary/30 rounded-xl text-base">
+                    Subscribe Free →
                 </Button>
-                <p className="text-[10px] text-slate-500 mt-2">
-                    Unsubscribe at any time. No spam.
+                <p className="text-[11px] text-slate-400 mt-3">
+                    ✓ Unsubscribe anytime · No spam · Privacy protected
                 </p>
               </div>
             </div>
