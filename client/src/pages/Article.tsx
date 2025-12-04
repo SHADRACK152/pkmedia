@@ -178,22 +178,28 @@ export default function ArticlePage() {
           </div>
         </div>
 
-        <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-lg mb-8 bg-black">
-          {isVideo(article.image) ? (
-            <video
-              src={article.image}
-              controls
-              autoPlay
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <img 
-              src={article.image} 
-              alt={article.title} 
-              className="w-full h-full object-cover"
-            />
-          )}
-        </div>
+        {article.image && (
+          <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-lg mb-8 bg-slate-100">
+            {isVideo(article.image) ? (
+              <video
+                src={article.image}
+                controls
+                autoPlay
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <img 
+                src={article.image} 
+                alt={article.title} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('Image failed to load:', article.image);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
+          </div>
+        )}
 
         <article className="prose prose-lg prose-blue max-w-none font-serif text-foreground/80">
           <div 
