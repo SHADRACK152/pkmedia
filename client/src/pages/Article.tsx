@@ -81,6 +81,9 @@ export default function ArticlePage() {
 
   const articleUrl = `/article/${slug}`;
   const articleDescription = article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
+  const absoluteImageUrl = article.image?.startsWith('http') 
+    ? article.image 
+    : `${typeof window !== 'undefined' ? window.location.origin : ''}${article.image}`;
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
@@ -93,7 +96,7 @@ export default function ArticlePage() {
         <meta property="og:url" content={`${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`} />
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={articleDescription} />
-        <meta property="og:image" content={article.image} />
+        <meta property="og:image" content={absoluteImageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="article:published_time" content={article.createdAt} />
@@ -105,7 +108,7 @@ export default function ArticlePage() {
         <meta name="twitter:url" content={`${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`} />
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={articleDescription} />
-        <meta name="twitter:image" content={article.image} />
+        <meta name="twitter:image" content={absoluteImageUrl} />
       </Helmet>
 
       <BreakingNewsTicker />
