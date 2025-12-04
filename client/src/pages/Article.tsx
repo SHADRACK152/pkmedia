@@ -17,7 +17,7 @@ export default function ArticlePage() {
   const id = params?.id;
   const [hasLiked, setHasLiked] = useState(false);
 
-  const { data: article, isLoading } = useQuery<any>({
+  const { data: article, isLoading, error } = useQuery<any>({
     queryKey: [`/api/articles/${id}`],
     enabled: !!id,
   });
