@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Share2, Facebook, Twitter, Link as LinkIcon, MessageCircle, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,29 +8,38 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 interface ShareButtonsProps {
-  url: string;
+  articleId: string;
   title: string;
   description?: string;
 }
 
-export default function ShareButtons({ url, title, description }: ShareButtonsProps) {
+export default function ShareButtons({ articleId, title, description }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}${url}` : url;
-  const encodedUrl = encodeURIComponent(shareUrl);
+  // Fetch short link for the article
+  const { data: shortLinkData } = useQuery<{ code: string; url: string }>({
+    queryKey: [`/api/articles/${articleId}/short-link`],
+  });
+
+  const shortUrl = shortLinkData 
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/s/${shortLinkData.code}`
+    : '';
+  
+  const encodedUrl = encodeURIComponent(shortUrl);
   const encodedTitle = encodeURIComponent(title);
   const encodedDescription = encodeURIComponent(description || '');
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(shortUrl);
       setCopied(true);
       toast({
         title: "Link Copied!",
-        description: "Article link copied to clipboard",
+        description: "Short link copied to clipboard",
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -54,13 +63,19 @@ export default function ShareButtons({ url, title, description }: ShareButtonsPr
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Share2 className="h-4 w-4" />
-          Share
-        </Button>
-      </DropdownMenuTrigger>
+    <div className="flex items-center gap-2">
+      {shortLinkData && (
+        <div className="text-xs text-muted-foreground font-mono bg-slate-50 px-2 py-1 rounded border">
+          {window.location.host}/s/{shortLinkData.code}
+        </div>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+        </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem onClick={() => handleShare('facebook')} className="cursor-pointer">
           <Facebook className="h-4 w-4 mr-2 text-blue-600" />
@@ -90,5 +105,6 @@ export default function ShareButtons({ url, title, description }: ShareButtonsPr
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    </div>
   );
 }

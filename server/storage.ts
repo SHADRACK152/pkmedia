@@ -1,6 +1,6 @@
 import { db } from "./db.js";
-import { users, articles, categories, comments, ads, dailyStats } from "../shared/schema.js";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment, Ad, InsertAd, DailyStats } from "../shared/schema.js";
+import { users, articles, categories, comments, ads, dailyStats, shortLinks } from "../shared/schema.js";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink } from "../shared/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -50,6 +50,12 @@ export interface IStorage {
   // Analytics operations
   recordVisit(date: string, isNewVisitor: boolean): Promise<void>;
   getDailyStats(limit?: number): Promise<DailyStats[]>;
+
+  // Short link operations
+  createShortLink(articleId: string): Promise<ShortLink>;
+  getShortLink(code: string): Promise<ShortLink | undefined>;
+  getShortLinkByArticleId(articleId: string): Promise<ShortLink | undefined>;
+  incrementShortLinkClicks(code: string): Promise<void>;
 }
 
 export class Storage implements IStorage {
@@ -277,6 +283,44 @@ export class Storage implements IStorage {
       .from(dailyStats)
       .orderBy(desc(dailyStats.date))
       .limit(limit);
+  }
+
+  // Short link operations
+  async createShortLink(articleId: string): Promise<ShortLink> {
+    // Generate a random 7-character code (like trib.al)
+    const code = this.generateShortCode();
+    
+    const [shortLink] = await db.insert(shortLinks)
+      .values({ code, articleId, clicks: 0 })
+      .returning();
+    
+    return shortLink;
+  }
+
+  async getShortLink(code: string): Promise<ShortLink | undefined> {
+    const [shortLink] = await db.select().from(shortLinks).where(eq(shortLinks.code, code)).limit(1);
+    return shortLink;
+  }
+
+  async getShortLinkByArticleId(articleId: string): Promise<ShortLink | undefined> {
+    const [shortLink] = await db.select().from(shortLinks).where(eq(shortLinks.articleId, articleId)).limit(1);
+    return shortLink;
+  }
+
+  async incrementShortLinkClicks(code: string): Promise<void> {
+    await db.update(shortLinks)
+      .set({ clicks: sql`${shortLinks.clicks} + 1` })
+      .where(eq(shortLinks.code, code));
+  }
+
+  private generateShortCode(): string {
+    // Generate a random 7-character code using alphanumeric characters
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 7; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
   }
 }
 

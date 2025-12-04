@@ -84,6 +84,7 @@ export default function ArticlePage() {
   const absoluteImageUrl = article.image?.startsWith('http') 
     ? article.image 
     : `${typeof window !== 'undefined' ? window.location.origin : ''}${article.image}`;
+  const absoluteUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`;
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
@@ -91,24 +92,30 @@ export default function ArticlePage() {
         <title>{article.title} - PKMedia</title>
         <meta name="description" content={articleDescription} />
         
-        {/* Open Graph / Facebook */}
+        {/* Open Graph / Facebook / WhatsApp */}
         <meta property="og:type" content="article" />
-        <meta property="og:url" content={`${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`} />
+        <meta property="og:site_name" content="PKMedia" />
+        <meta property="og:url" content={absoluteUrl} />
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={articleDescription} />
         <meta property="og:image" content={absoluteImageUrl} />
+        <meta property="og:image:secure_url" content={absoluteImageUrl} />
+        <meta property="og:image:type" content="image/jpeg" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={article.title} />
         <meta property="article:published_time" content={article.createdAt} />
         <meta property="article:author" content={article.author} />
         <meta property="article:section" content={article.category} />
         
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:url" content={`${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`} />
+        <meta name="twitter:site" content="@PKMedia" />
+        <meta name="twitter:url" content={absoluteUrl} />
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={articleDescription} />
         <meta name="twitter:image" content={absoluteImageUrl} />
+        <meta name="twitter:image:alt" content={article.title} />
       </Helmet>
 
       <BreakingNewsTicker />
@@ -163,7 +170,7 @@ export default function ArticlePage() {
               <div className="h-6 w-px bg-border mx-2"></div>
 
               <ShareButtons 
-                url={articleUrl}
+                articleId={id!}
                 title={article.title}
                 description={articleDescription}
               />

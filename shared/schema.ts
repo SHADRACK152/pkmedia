@@ -120,3 +120,18 @@ export const insertDailyStatsSchema = createInsertSchema(dailyStats).omit({
 export type InsertDailyStats = z.infer<typeof insertDailyStatsSchema>;
 export type DailyStats = typeof dailyStats.$inferSelect;
 
+// Short Links table
+export const shortLinks = pgTable("short_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 8 }).notNull().unique(), // Short code like "p2GI1Hl"
+  articleId: varchar("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
+  clicks: integer("clicks").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertShortLinkSchema = createInsertSchema(shortLinks).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertShortLink = z.infer<typeof insertShortLinkSchema>;
+export type ShortLink = typeof shortLinks.$inferSelect;
