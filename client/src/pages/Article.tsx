@@ -6,11 +6,13 @@ import Footer from "@/components/layout/Footer";
 import BreakingNewsTicker from "@/components/layout/Ticker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, User, Share2, Facebook, Twitter, Linkedin, ChevronLeft, Eye, ThumbsUp, MessageSquare } from "lucide-react";
+import { Clock, User, ChevronLeft, Eye, ThumbsUp, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import CommentSection from "@/components/news/CommentSection";
+import ShareButtons from "@/components/news/ShareButtons";
+import { Helmet } from 'react-helmet-async';
 
 export default function ArticlePage() {
   const [match, params] = useRoute("/article/:id");
@@ -75,8 +77,35 @@ export default function ArticlePage() {
     );
   }
 
+  const articleUrl = `/article/${article.id}`;
+  const articleDescription = article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
+      <Helmet>
+        <title>{article.title} - PKMedia</title>
+        <meta name="description" content={articleDescription} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={`${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`} />
+        <meta property="og:title" content={article.title} />
+        <meta property="og:description" content={articleDescription} />
+        <meta property="og:image" content={article.image} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="article:published_time" content={article.createdAt} />
+        <meta property="article:author" content={article.author} />
+        <meta property="article:section" content={article.category} />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={`${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`} />
+        <meta name="twitter:title" content={article.title} />
+        <meta name="twitter:description" content={articleDescription} />
+        <meta name="twitter:image" content={article.image} />
+      </Helmet>
+
       <BreakingNewsTicker />
       <Navbar />
       
@@ -128,20 +157,11 @@ export default function ArticlePage() {
 
               <div className="h-6 w-px bg-border mx-2"></div>
 
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" className="rounded-full w-8 h-8">
-                  <Share2 className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-blue-600 hover:text-blue-700">
-                  <Facebook className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-sky-500 hover:text-sky-600">
-                  <Twitter className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="icon" className="rounded-full w-8 h-8 text-blue-700 hover:text-blue-800">
-                  <Linkedin className="w-4 h-4" />
-                </Button>
-              </div>
+              <ShareButtons 
+                url={articleUrl}
+                title={article.title}
+                description={articleDescription}
+              />
             </div>
           </div>
         </div>
