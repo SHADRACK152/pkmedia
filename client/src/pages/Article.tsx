@@ -164,10 +164,7 @@ export default function ArticlePage() {
         </div>
 
         <article className="prose prose-lg prose-blue max-w-none font-serif text-foreground/80">
-          <p className="lead text-xl md:text-2xl mb-6 font-light">
-            {article.content.substring(0, 150)}...
-          </p>
-          <p className="whitespace-pre-wrap">
+          <p className="whitespace-pre-wrap leading-relaxed text-lg">
             {article.content}
           </p>
         </article>
