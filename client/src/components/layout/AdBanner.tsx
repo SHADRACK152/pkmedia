@@ -37,9 +37,9 @@ export default function AdBanner({ className, format = "auto", label = "Sponsore
         target="_blank" 
         rel="noopener noreferrer"
         className={cn(
-          "block relative overflow-hidden rounded-lg group cursor-pointer transition-all hover:opacity-95",
+          "block relative overflow-hidden rounded-lg group cursor-pointer transition-all hover:shadow-xl",
           format === "square" && "aspect-square w-full",
-          format === "horizontal" && "h-32 w-full",
+          format === "horizontal" && "h-28 w-full",
           format === "vertical" && "w-full h-[600px]",
           format === "auto" && "w-full h-64",
           className
@@ -58,12 +58,11 @@ export default function AdBanner({ className, format = "auto", label = "Sponsore
           <img 
             src={ad.imageUrl} 
             alt={ad.title} 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             onError={(e) => {
               console.error(`AdBanner: Failed to load image ${ad.imageUrl}`);
               e.currentTarget.style.display = 'none';
               e.currentTarget.parentElement?.classList.add('bg-red-100');
-              // Add a text fallback
               const span = document.createElement('span');
               span.innerText = `Image failed: ${ad.title}`;
               span.className = 'text-red-500 p-4 text-sm';
@@ -71,46 +70,38 @@ export default function AdBanner({ className, format = "auto", label = "Sponsore
             }}
           />
         )}
-        <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm z-10">
+        <div className="absolute top-2 right-2 bg-white/90 text-slate-700 text-[9px] px-2 py-1 rounded font-bold uppercase tracking-wider backdrop-blur-sm z-10 shadow-sm">
           {label}
         </div>
         
-        {/* Text Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 pt-12 flex flex-col justify-end">
-          <h3 className="text-white font-bold text-xl leading-tight drop-shadow-md line-clamp-2">
+        {/* Refined Text Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-5 pt-16 flex flex-col justify-end">
+          <h3 className="text-white font-bold text-lg md:text-xl leading-tight drop-shadow-lg line-clamp-2 group-hover:text-primary transition-colors">
             {ad.title}
           </h3>
         </div>
 
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
       </a>
     );
   }
 
   return (
     <div className={cn(
-      "bg-slate-100 border border-slate-200 rounded-lg overflow-hidden flex flex-col items-center justify-center relative group cursor-pointer hover:bg-slate-200 transition-colors",
+      "bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-dashed border-slate-200 rounded-lg overflow-hidden flex flex-col items-center justify-center relative group hover:border-slate-300 transition-all",
       format === "square" && "aspect-square w-full",
-      format === "horizontal" && "h-32 w-full",
+      format === "horizontal" && "h-28 w-full",
       format === "vertical" && "w-full h-[600px]",
       format === "auto" && "w-full h-64",
       className
     )}>
       <div className="text-center p-4 z-10">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{label}</p>
-        <div className="bg-white/50 px-4 py-2 rounded-md border border-slate-200/50 backdrop-blur-sm">
-            <p className="text-slate-600 text-sm font-medium">Space Available</p>
-            <p className="text-slate-400 text-xs mt-1">Contact us to advertise</p>
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">{label}</p>
+        <div className="bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-sm">
+            <p className="text-slate-700 text-sm font-bold">Ad Space Available</p>
+            <p className="text-slate-500 text-xs mt-1">Advertise with us</p>
         </div>
       </div>
-      
-      {/* Decorative pattern */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }}>
-      </div>
-      
-      {/* Diagonal stripes */}
-      <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[linear-gradient(45deg,transparent_25%,#000_25%,#000_50%,transparent_50%,transparent_75%,#000_75%,#000_100%)] bg-[length:20px_20px]"></div>
     </div>
   );
 }

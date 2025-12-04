@@ -53,10 +53,14 @@ export default function Home() {
       
       <main className="flex-1 container mx-auto px-4 py-8">
         
-        {/* Hero Section */}
+        {/* Hero Section - Magazine Style */}
         {activeCategory === "All" && featuredArticle && (
-          <section className="mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <ArticleCard article={featuredArticle} variant="hero" />
+          <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="lg:col-span-2">
+                <ArticleCard article={featuredArticle} variant="hero" />
+              </div>
+            </div>
           </section>
         )}
 
@@ -66,8 +70,8 @@ export default function Home() {
           <div className="lg:col-span-8">
             
             {/* Category Filter */}
-            <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
-               <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar">
+            <div className="flex items-center justify-between mb-6 pb-3 border-b-2 border-slate-900">
+               <div className="flex overflow-x-auto pb-2 gap-3 no-scrollbar">
                 <Button 
                   variant={activeCategory === "All" ? "default" : "ghost"}
                   onClick={() => setActiveCategory("All")}
@@ -90,10 +94,10 @@ export default function Home() {
                </div>
             </div>
 
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl md:text-3xl font-serif font-bold text-slate-900 flex items-center gap-3">
-                <span className="w-1.5 h-8 bg-primary rounded-full"></span>
-                {activeCategory === "All" ? "Top Stories" : `${activeCategory} News`}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-serif font-black text-slate-900 flex items-center gap-3">
+                <span className="w-1 h-8 bg-primary"></span>
+                {activeCategory === "All" ? "Latest Stories" : activeCategory}
               </h2>
               <Link href="/archive">
                  <Button variant="ghost" className="text-primary hover:text-primary/80 hidden sm:flex">
@@ -102,9 +106,9 @@ export default function Home() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {gridArticles.slice(0, visibleCount).map((article, idx) => (
-                <div key={article.id} className="animate-in fade-in duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
+                <div key={article.id} className="animate-in fade-in duration-500" style={{ animationDelay: `${idx * 50}ms` }}>
                     <ArticleCard article={article} />
                 </div>
               ))}

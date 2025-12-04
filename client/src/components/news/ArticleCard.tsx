@@ -47,22 +47,29 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
   if (variant === "hero") {
      return (
       <Link href={`/article/${article.id}`}>
-        <div className="group block h-full w-full relative overflow-hidden rounded-2xl shadow-2xl cursor-pointer">
-          <div className="absolute inset-0 bg-slate-900/20 group-hover:bg-slate-900/10 transition-colors z-10" />
-          <MediaContent className="w-full h-[500px] object-cover transition-transform duration-1000 group-hover:scale-105" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-20" />
+        <div className="group block h-full w-full relative overflow-hidden rounded-xl shadow-2xl cursor-pointer bg-slate-900">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/90 z-10" />
+          <MediaContent className="w-full h-[550px] object-cover transition-transform duration-1000 group-hover:scale-105 opacity-90" />
           
-          <div className="absolute bottom-0 left-0 p-8 md:p-12 z-30 w-full md:w-3/4">
-            <Badge className="mb-4 bg-primary text-white hover:bg-primary/90 border-none px-3 py-1 text-sm">
-              {article.category}
-            </Badge>
-            <h2 className="text-3xl md:text-5xl font-serif font-bold text-white leading-tight mb-4 drop-shadow-sm group-hover:text-primary-foreground/90 transition-colors">
-              {article.title}
-            </h2>
-            {/* Content removed as per user request to only show heading */}
-            <div className="flex items-center gap-6 text-sm text-gray-300 font-medium">
-              <span className="flex items-center gap-2"><User className="w-4 h-4 text-primary" /> {article.author}</span>
-              <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> {timeAgo}</span>
+          <div className="absolute bottom-0 left-0 p-6 md:p-10 z-20 w-full">
+            <div className="max-w-4xl">
+              <Badge className="mb-3 bg-primary text-white hover:bg-primary/90 border-none px-4 py-1.5 text-xs font-bold uppercase tracking-wider">
+                {article.category}
+              </Badge>
+              <h2 className="text-3xl md:text-5xl font-serif font-black text-white leading-[1.1] mb-4 drop-shadow-2xl">
+                {article.title}
+              </h2>
+              <div className="flex items-center gap-4 text-sm text-gray-200 font-medium">
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" /> 
+                  <span className="font-semibold">{article.author}</span>
+                </span>
+                <span className="text-gray-400">•</span>
+                <span className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" /> 
+                  {timeAgo}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -120,34 +127,36 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
   // Default Card
   return (
     <Link href={`/article/${article.id}`}>
-      <div className="block h-full group hover:-translate-y-1 transition-transform duration-300 cursor-pointer">
-        <Card className="h-full border-none shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col bg-white ring-1 ring-slate-900/5">
-          <div className="aspect-[16/10] w-full overflow-hidden relative">
-            <MediaContent className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-            <div className="absolute top-3 left-3">
-              <Badge variant="secondary" className="bg-white/95 backdrop-blur hover:bg-white text-slate-900 shadow-sm font-semibold">
+      <div className="block h-full group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
+        <Card className="h-full border-0 shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col bg-white">
+          <div className="aspect-[16/10] w-full overflow-hidden relative bg-slate-100">
+            <MediaContent className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute top-3 left-3 z-10">
+              <Badge variant="secondary" className="bg-white backdrop-blur hover:bg-white text-slate-900 shadow-lg font-bold text-xs uppercase tracking-wide">
                 {article.category}
               </Badge>
             </div>
           </div>
-          <CardContent className="p-5 flex-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                <span className="font-medium text-slate-700">{article.author}</span>
-                <span>•</span>
+          <CardContent className="p-6 flex-1 flex flex-col">
+            <div className="flex items-center gap-2 text-xs text-slate-500 mb-3 font-medium">
+                <User className="w-3.5 h-3.5" />
+                <span className="font-semibold text-slate-700">{article.author}</span>
+                <span className="text-slate-400">•</span>
+                <Clock className="w-3.5 h-3.5" />
                 <span>{timeAgo}</span>
             </div>
-            <h3 className="text-xl font-serif font-bold leading-tight mb-3 text-slate-900 group-hover:text-primary transition-colors line-clamp-3">
+            <h3 className="text-xl font-serif font-bold leading-tight mb-3 text-slate-900 group-hover:text-primary transition-colors line-clamp-2 flex-1">
               {article.title}
             </h3>
-            <p className="text-slate-500 text-sm line-clamp-2 leading-relaxed">
+            <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed mb-4">
               {article.content}
             </p>
+            <div className="mt-auto pt-3 border-t border-slate-100">
+              <span className="text-sm font-bold text-primary flex items-center gap-2 group-hover:gap-3 transition-all uppercase tracking-wide">
+                  Read More <ArrowRight className="w-4 h-4" />
+              </span>
+            </div>
           </CardContent>
-          <CardFooter className="p-5 pt-0 mt-auto">
-            <span className="text-sm font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
-                Read Story <ArrowRight className="w-4 h-4" />
-            </span>
-          </CardFooter>
         </Card>
       </div>
     </Link>
