@@ -164,10 +164,90 @@ export default function ArticlePage() {
         </div>
 
         <article className="prose prose-lg prose-blue max-w-none font-serif text-foreground/80">
-          <p className="whitespace-pre-wrap leading-relaxed text-lg">
-            {article.content}
-          </p>
+          <div 
+            className="article-content leading-relaxed text-lg"
+            dangerouslySetInnerHTML={{ __html: article.content }}
+          />
         </article>
+
+        <style>{`
+          .article-content {
+            line-height: 1.8;
+          }
+          .article-content p {
+            margin-bottom: 1.25rem;
+          }
+          .article-content h1,
+          .article-content h2,
+          .article-content h3,
+          .article-content h4,
+          .article-content h5,
+          .article-content h6 {
+            font-weight: bold;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+          }
+          .article-content h1 { font-size: 2.25rem; }
+          .article-content h2 { font-size: 1.875rem; }
+          .article-content h3 { font-size: 1.5rem; }
+          .article-content img {
+            max-width: 100%;
+            height: auto;
+            margin: 2rem auto;
+            display: block;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          }
+          .article-content ul,
+          .article-content ol {
+            margin: 1.5rem 0;
+            padding-left: 2rem;
+          }
+          .article-content li {
+            margin-bottom: 0.5rem;
+          }
+          .article-content blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: #64748b;
+          }
+          .article-content a {
+            color: #3b82f6;
+            text-decoration: underline;
+          }
+          .article-content a:hover {
+            color: #2563eb;
+          }
+          .article-content code {
+            background: #f1f5f9;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+          }
+          .article-content pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+          }
+          .article-content pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+          }
+          .article-content strong {
+            font-weight: 700;
+          }
+          .article-content em {
+            font-style: italic;
+          }
+        `}</style>
 
         <CommentSection articleId={id} />
 

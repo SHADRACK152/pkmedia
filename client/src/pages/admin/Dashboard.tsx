@@ -45,11 +45,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import RichTextEditor from "@/components/ui/rich-text-editor";
 
 export default function AdminDashboard() {
   const [_, setLocation] = useLocation();
@@ -65,6 +67,14 @@ export default function AdminDashboard() {
   const [isAdSheetOpen, setIsAdSheetOpen] = useState(false);
   const [editingAd, setEditingAd] = useState<Ad | null>(null);
   const [commentFilter, setCommentFilter] = useState<'all' | 'pending'>('all');
+  const [articleContent, setArticleContent] = useState('');
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    title: '',
+    category: '',
+    author: '',
+    image: ''
+  });
 
   // Real Data Queries
   const { data: articles = [] } = useQuery<any[]>({
@@ -323,8 +333,8 @@ export default function AdminDashboard() {
 
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-    let imageUrl = formData.get('image') as string;
+    const form = e.target as HTMLFormElement;
+    let imageUrl = formData.image;
 
     if (imageUploadType === 'file' && uploadedFile) {
       try {
@@ -337,13 +347,13 @@ export default function AdminDashboard() {
     }
 
     const data = {
-      title: formData.get('title'),
-      category: formData.get('category'),
-      author: formData.get('author'),
+      title: formData.title,
+      category: formData.category,
+      author: formData.author,
       image: imageUrl,
-      content: formData.get('content'),
-      featured: formData.get('featured') === 'on',
-      isBreaking: formData.get('breaking') === 'on',
+      content: articleContent,
+      featured: (form.elements.namedItem('featured') as HTMLInputElement)?.checked || false,
+      isBreaking: (form.elements.namedItem('breaking') as HTMLInputElement)?.checked || false,
     };
 
     if (editingArticle) {
@@ -361,8 +371,16 @@ export default function AdminDashboard() {
 
   const openArticleEditor = (article?: any) => {
     setEditingArticle(article || null);
+    setArticleContent(article?.content || '');
     setImageUploadType('url');
     setUploadedFile(null);
+    setCurrentStep(1);
+    setFormData({
+      title: article?.title || '',
+      category: article?.category || '',
+      author: article?.author || '',
+      image: article?.image || ''
+    });
     setIsArticleSheetOpen(true);
   };
 
@@ -1208,123 +1226,330 @@ export default function AdminDashboard() {
         </main>
       </div>
 
-      {/* Article Editor Sheet */}
-      <Sheet open={isArticleSheetOpen} onOpenChange={setIsArticleSheetOpen}>
-        <SheetContent side="right" className="w-[100%] sm:w-[600px] overflow-y-auto">
-          <SheetHeader className="mb-6">
-            <SheetTitle>{editingArticle ? "Edit Article" : "Create New Article"}</SheetTitle>
-            <SheetDescription>
-              {editingArticle ? "Make changes to your article below." : "Fill in the details to publish a new article."}
-            </SheetDescription>
-          </SheetHeader>
-          <form onSubmit={handleSaveArticle} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="title">Article Title</Label>
-              <Input id="title" name="title" defaultValue={editingArticle?.title} placeholder="Enter a catchy headline" required />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select name="category" defaultValue={editingArticle?.category || "Politics"}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {categories.map((cat: any) => (
-                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+      {/* Article Editor Dialog */}
+      <Dialog open={isArticleSheetOpen} onOpenChange={setIsArticleSheetOpen}>
+        <DialogContent className="max-w-7xl h-[90vh] p-0 gap-0">
+          <div className="h-full flex flex-col">
+            <DialogHeader className="px-8 py-6 border-b bg-slate-50">
+              <DialogTitle className="text-2xl">{editingArticle ? "Edit Article" : "Create New Article"}</DialogTitle>
+              <DialogDescription>
+                {editingArticle ? "Make changes to your article below." : "Fill in the details to publish a new article."}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSaveArticle} className="flex-1 flex flex-col">
+              <div className="flex-1 flex overflow-hidden">
+                {/* Sidebar Navigation */}
+                <div className="w-56 border-r bg-slate-50/50 p-6 overflow-y-auto">
+                  <nav className="space-y-1">
+                    <div 
+                      className={`block px-4 py-3 text-sm font-medium rounded-lg transition-colors ${currentStep >= 1 ? 'text-primary bg-white' : 'text-slate-400 cursor-not-allowed'}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 1 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          {currentStep > 1 ? '✓' : '1'}
+                        </span>
+                        Basic Info
+                      </span>
+                    </div>
+                    <div 
+                      className={`block px-4 py-3 text-sm font-medium rounded-lg transition-colors ${currentStep >= 2 ? 'text-primary bg-white' : 'text-slate-400 cursor-not-allowed'}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 2 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          {currentStep > 2 ? '✓' : '2'}
+                        </span>
+                        Featured Media
+                      </span>
+                    </div>
+                    <div 
+                      className={`block px-4 py-3 text-sm font-medium rounded-lg transition-colors ${currentStep >= 3 ? 'text-primary bg-white' : 'text-slate-400 cursor-not-allowed'}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 3 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          {currentStep > 3 ? '✓' : '3'}
+                        </span>
+                        Content
+                      </span>
+                    </div>
+                    <div 
+                      className={`block px-4 py-3 text-sm font-medium rounded-lg transition-colors ${currentStep >= 4 ? 'text-primary bg-white' : 'text-slate-400 cursor-not-allowed'}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 4 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          {currentStep > 4 ? '✓' : '4'}
+                        </span>
+                        Publishing
+                      </span>
+                    </div>
+                  </nav>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="author">Author</Label>
-                    <Input id="author" name="author" defaultValue={editingArticle?.author} placeholder="Author Name" />
-                </div>
-            </div>
 
-            <div className="space-y-3">
-              <Label>Featured Image</Label>
-              <div className="flex gap-4 mb-2">
-                <div className="flex items-center space-x-2">
-                  <input 
-                    type="radio" 
-                    id="type-url" 
-                    checked={imageUploadType === 'url'} 
-                    onChange={() => setImageUploadType('url')}
-                    className="accent-primary"
-                  />
-                  <Label htmlFor="type-url" className="cursor-pointer font-normal">Image URL</Label>
+                {/* Main Form Content */}
+                <div className="flex-1 overflow-y-auto px-8 py-6 max-w-5xl mx-auto w-full">
+                
+                {/* Step 1: Basic Info */}
+                {currentStep === 1 && (
+                <div id="basic-info" className="mb-8 scroll-mt-6">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">1</span>
+                    Basic Information
+                  </h3>
+                  <div className="space-y-4 pl-8">
+                    <div className="space-y-2">
+                      <Label htmlFor="title" className="text-base font-semibold">Article Title *</Label>
+                      <Input 
+                        id="title" 
+                        name="title" 
+                        value={formData.title}
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        placeholder="Enter a compelling headline that captures attention" 
+                        required 
+                        className="text-lg py-6 font-serif"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="category" className="text-base font-semibold">Category *</Label>
+                        <Select 
+                          name="category" 
+                          value={formData.category || "Politics"}
+                          onValueChange={(value) => setFormData({...formData, category: value})}
+                        >
+                          <SelectTrigger className="py-6">
+                            <SelectValue placeholder="Select Category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories.map((cat: any) => (
+                              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="author" className="text-base font-semibold">Author Name *</Label>
+                        <Input 
+                          id="author" 
+                          name="author" 
+                          value={formData.author}
+                          onChange={(e) => setFormData({...formData, author: e.target.value})}
+                          placeholder="Your name" 
+                          className="py-6"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end mt-6">
+                      <Button 
+                        type="button" 
+                        onClick={() => {
+                          if (formData.title && formData.category && formData.author) {
+                            setCurrentStep(2);
+                          } else {
+                            toast({ title: "Missing Information", description: "Please fill in all required fields", variant: "destructive" });
+                          }
+                        }}
+                        className="px-8 py-6 text-base"
+                      >
+                        Next: Featured Media →
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input 
-                    type="radio" 
-                    id="type-file" 
-                    checked={imageUploadType === 'file'} 
-                    onChange={() => setImageUploadType('file')}
-                    className="accent-primary"
-                  />
-                  <Label htmlFor="type-file" className="cursor-pointer font-normal">Upload from Computer</Label>
+                )}
+
+                {/* Step 2: Featured Media */}
+                {currentStep === 2 && (
+                <div id="featured-media" className="mb-8 scroll-mt-6">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">2</span>
+                    Featured Image or Video
+                  </h3>
+                  <div className="space-y-4 pl-8">
+                    <div className="flex gap-3">
+                      <Button 
+                        type="button"
+                        variant={imageUploadType === 'url' ? 'default' : 'outline'}
+                        onClick={() => setImageUploadType('url')}
+                        className="flex-1"
+                      >
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        Image URL
+                      </Button>
+                      <Button 
+                        type="button"
+                        variant={imageUploadType === 'file' ? 'default' : 'outline'}
+                        onClick={() => setImageUploadType('file')}
+                        className="flex-1"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload File
+                      </Button>
+                    </div>
+
+                    {imageUploadType === 'url' ? (
+                      <Input 
+                        id="image" 
+                        name="image" 
+                        value={formData.image}
+                        onChange={(e) => setFormData({...formData, image: e.target.value})}
+                        placeholder="https://example.com/image.jpg" 
+                        className="py-6"
+                      />
+                    ) : (
+                      <div className="border-2 border-dashed border-primary/30 rounded-xl p-8 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer relative">
+                        <input 
+                          type="file" 
+                          accept="image/*,video/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) setUploadedFile(e.target.files[0]);
+                          }}
+                        />
+                        <div className="text-center">
+                          <Upload className="h-12 w-12 text-primary mx-auto mb-3" />
+                          <p className="text-base font-semibold text-slate-900 mb-1">
+                            {uploadedFile ? uploadedFile.name : "Click to upload or drag and drop"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">Images or Videos (max. 50MB)</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between mt-6">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => setCurrentStep(1)}
+                        className="px-8 py-6 text-base"
+                      >
+                        ← Back
+                      </Button>
+                      <Button 
+                        type="button" 
+                        onClick={() => {
+                          if ((imageUploadType === 'url' && formData.image) || (imageUploadType === 'file' && uploadedFile)) {
+                            setCurrentStep(3);
+                          } else {
+                            toast({ title: "Missing Media", description: "Please add a featured image or video", variant: "destructive" });
+                          }
+                        }}
+                        className="px-8 py-6 text-base"
+                      >
+                        Next: Article Content →
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                )}
+
+                {/* Step 3: Article Content */}
+                {currentStep === 3 && (
+                <div id="article-content" className="mb-8 scroll-mt-6">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">3</span>
+                    Article Content
+                  </h3>
+                  <div className="space-y-3 pl-8">
+                    <p className="text-sm text-muted-foreground">
+                      Write your article using the rich text editor. You can format text, add images, and embed videos.
+                    </p>
+                    <div className="border rounded-lg overflow-hidden" style={{ height: '500px' }}>
+                      <RichTextEditor 
+                        value={articleContent}
+                        onChange={setArticleContent}
+                        placeholder="Start writing your article... Use the toolbar to format text, insert images, and add videos."
+                        className="h-full"
+                        onImageUpload={async (file) => {
+                          const uploadRes = await uploadFileMutation.mutateAsync(file);
+                          return uploadRes.url;
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex justify-between mt-6">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => setCurrentStep(2)}
+                        className="px-8 py-6 text-base"
+                      >
+                        ← Back
+                      </Button>
+                      <Button 
+                        type="button" 
+                        onClick={() => {
+                          if (articleContent.trim()) {
+                            setCurrentStep(4);
+                          } else {
+                            toast({ title: "Missing Content", description: "Please write your article content", variant: "destructive" });
+                          }
+                        }}
+                        className="px-8 py-6 text-base"
+                      >
+                        Next: Publishing Options →
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                )}
+
+                {/* Step 4: Publishing Options */}
+                {currentStep === 4 && (
+                <div id="publishing-options" className="mb-6 scroll-mt-6">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">4</span>
+                    Publishing Options
+                  </h3>
+                  <div className="pl-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border-2">
+                      <div className="flex items-center gap-3 p-4 bg-white rounded-lg border hover:border-primary/50 transition-colors">
+                        <Switch id="featured" name="featured" defaultChecked={editingArticle?.featured} />
+                        <div>
+                          <Label htmlFor="featured" className="text-base font-semibold cursor-pointer">Featured Story</Label>
+                          <p className="text-xs text-muted-foreground">Highlight on homepage</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-4 bg-white rounded-lg border hover:border-red-500/50 transition-colors">
+                        <Switch id="breaking" name="breaking" defaultChecked={editingArticle?.isBreaking} />
+                        <div>
+                          <Label htmlFor="breaking" className="text-base font-semibold cursor-pointer text-red-600">Breaking News</Label>
+                          <p className="text-xs text-muted-foreground">Show in ticker</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between mt-6">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => setCurrentStep(3)}
+                        className="px-8 py-6 text-base"
+                      >
+                        ← Back
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                )}
+
                 </div>
               </div>
 
-              {imageUploadType === 'url' ? (
-                <div className="flex gap-2">
-                  <Input id="image" name="image" defaultValue={editingArticle?.image} placeholder="https://..." />
-                  <Button type="button" variant="outline" size="icon"><ImageIcon className="h-4 w-4" /></Button>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
-                  <input 
-                    type="file" 
-                    accept="image/*,video/*"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) setUploadedFile(e.target.files[0]);
-                    }}
-                  />
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium text-slate-700">
-                    {uploadedFile ? uploadedFile.name : "Click to upload or drag and drop"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Images or Videos (max. 50MB)</p>
-                </div>
+              {currentStep === 4 && (
+              <div className="flex gap-4 px-8 py-6 border-t bg-slate-50 shadow-lg">
+                <Button type="button" variant="outline" className="px-8 py-6 text-base" onClick={() => setIsArticleSheetOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1 py-6 text-lg font-bold shadow-lg">
+                  {editingArticle ? "Update Article" : "Publish Article"}
+                </Button>
+              </div>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="content">Content</Label>
-              <Textarea 
-                id="content" 
-                name="content"
-                defaultValue={editingArticle?.content} 
-                placeholder="Write your article here..." 
-                className="min-h-[300px] font-serif"
-              />
-            </div>
-
-            <div className="flex items-center gap-8 p-4 bg-slate-50 rounded-lg border">
-                <div className="flex items-center gap-2">
-                    <Switch id="featured" name="featured" defaultChecked={editingArticle?.featured} />
-                    <Label htmlFor="featured">Featured Story</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Switch id="breaking" name="breaking" defaultChecked={editingArticle?.isBreaking} />
-                    <Label htmlFor="breaking" className="text-red-600 font-bold">Breaking News</Label>
-                </div>
-            </div>
-
-            <div className="flex gap-4 pt-4 border-t">
-                <Button type="submit" className="flex-1">
-                    {editingArticle ? "Update Article" : "Publish Article"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setIsArticleSheetOpen(false)}>
-                    Cancel
-                </Button>
-            </div>
-          </form>
-        </SheetContent>
-      </Sheet>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Ad Editor Sheet */}
       <Sheet open={isAdSheetOpen} onOpenChange={setIsAdSheetOpen}>
