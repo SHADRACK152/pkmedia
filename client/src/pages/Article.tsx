@@ -226,25 +226,6 @@ export default function ArticlePage() {
           />
         </article>
 
-        {/* Tags at the end of article */}
-        {article.tags && article.tags.length > 0 && (
-          <div className="mt-8 pt-6 border-t">
-            <h3 className="text-sm font-semibold text-muted-foreground mb-3">TAGGED WITH</h3>
-            <div className="flex flex-wrap gap-2">
-              {article.tags.map((tag: string, index: number) => (
-                <Link key={index} href={`/?tag=${encodeURIComponent(tag)}`}>
-                  <Badge 
-                    variant="outline" 
-                    className="cursor-pointer hover:bg-primary hover:text-white transition-colors"
-                  >
-                    {tag}
-                  </Badge>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
         <style>{`
           .article-content {
             line-height: 1.8;

@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import AdBanner from "@/components/layout/AdBanner";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BreakingNewsTicker from "@/components/layout/Ticker";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight, ChevronRight, TrendingUp, FileText, X } from "lucide-react";
+import { ArrowRight, ChevronRight, TrendingUp, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { Article, Category } from "@shared/schema";
 import ArticleCard from "@/components/news/ArticleCard";
@@ -15,15 +13,10 @@ import ArticleCard from "@/components/news/ArticleCard";
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [visibleCount, setVisibleCount] = useState(6);
-  const [location] = useLocation();
-  
-  // Get tag from URL query parameter
-  const searchParams = new URLSearchParams(window.location.search);
-  const tagFilter = searchParams.get('tag');
 
   useEffect(() => {
     setVisibleCount(6);
-  }, [activeCategory, tagFilter]);
+  }, [activeCategory]);
 
   const { data: articles = [] } = useQuery<Article[]>({
     queryKey: ['/api/articles'],
@@ -40,16 +33,9 @@ export default function Home() {
     return dateB - dateA;
   })[0];
 
-  let filteredArticles = activeCategory === "All" 
+  const filteredArticles = activeCategory === "All" 
     ? articles 
     : articles.filter(a => a.category?.toLowerCase() === activeCategory.toLowerCase());
-  
-  // Filter by tag if tag parameter is present
-  if (tagFilter) {
-    filteredArticles = filteredArticles.filter(a => 
-      a.tags && a.tags.some((t: string) => t.toLowerCase() === tagFilter.toLowerCase())
-    );
-  }
 
   // Show all articles in the grid, even if featured
   const gridArticles = filteredArticles;
@@ -89,18 +75,6 @@ export default function Home() {
           
           {/* Main Content Column */}
           <div className="lg:col-span-8">
-            
-            {/* Tag Filter Badge */}
-            {tagFilter && (
-              <div className="mb-4">
-                <Badge variant="secondary" className="px-4 py-2">
-                  Filtered by tag: {tagFilter}
-                  <Link href="/">
-                    <X className="w-3 h-3 ml-2 cursor-pointer hover:text-destructive" />
-                  </Link>
-                </Badge>
-              </div>
-            )}
             
             {/* Category Filter */}
             <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-slate-900/10">

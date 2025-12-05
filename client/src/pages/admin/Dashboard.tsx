@@ -1484,25 +1484,22 @@ export default function AdminDashboard() {
                       {/* Common Tags Suggestions */}
                       <div className="flex flex-wrap gap-2">
                         <span className="text-xs text-muted-foreground">Quick add:</span>
-                        {availableTags.slice(0, 8).map((tag: any) => (
+                        {['Breaking News', 'Trending', 'Analysis', 'Opinion', 'Investigation', 'Exclusive'].map((tag) => (
                           <Button
-                            key={tag.id}
+                            key={tag}
                             type="button"
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              if (!formData.tags.includes(tag.name)) {
-                                setFormData({...formData, tags: [...formData.tags, tag.name]});
+                              if (!formData.tags.includes(tag)) {
+                                setFormData({...formData, tags: [...formData.tags, tag]});
                               }
                             }}
                             className="text-xs h-7"
                           >
-                            {tag.name}
+                            {tag}
                           </Button>
                         ))}
-                        {availableTags.length === 0 && (
-                          <span className="text-xs text-muted-foreground italic">No tags available. Add tags in Settings.</span>
-                        )}
                       </div>
                       
                       {/* Selected Tags */}
