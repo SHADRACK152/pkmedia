@@ -16,9 +16,20 @@ import { Helmet } from 'react-helmet-async';
 import { extractIdFromSlug } from "@/lib/utils";
 
 export default function ArticlePage() {
-  const [match, params] = useRoute("/article/:slug");
-  const slug = params?.slug;
-  const id = slug ? extractIdFromSlug(slug) : null;
+  const [matchSlug, paramsSlug] = useRoute("/article/:slug");
+  const slug = paramsSlug?.slug;
+  
+  // Extract ID - if slug contains __, extract from it, otherwise treat as direct UUID
+  let id: string | null = null;
+  if (slug) {
+    if (slug.includes('__')) {
+      id = extractIdFromSlug(slug);
+    } else {
+      // Direct UUID or short format
+      id = slug;
+    }
+  }
+  
   const [hasLiked, setHasLiked] = useState(false);
 
   const { data: article, isLoading, error } = useQuery<any>({

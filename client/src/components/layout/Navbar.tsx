@@ -6,7 +6,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { Category, Article } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
-import { createArticleSlug } from "@/lib/utils";
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
@@ -83,13 +82,21 @@ export default function Navbar() {
   };
 
   // Navigate to article
-  const goToArticle = (article: Article) => {
-    const slug = createArticleSlug(article.title, article.id);
+  const goToArticle = async (articleId: string) => {
     saveSearch(searchQuery);
     setIsSearchOpen(false);
     setSearchQuery("");
     setSearchResults([]);
-    setLocation(`/article/${slug}`);
+    
+    // Fetch short link and navigate
+    try {
+      const response = await fetch(`/api/articles/${articleId}/short-link`);
+      const data = await response.json();
+      setLocation(`/s/${data.code}`);
+    } catch (error) {
+      // Fallback to article ID if short link fails
+      setLocation(`/article/${articleId}`);
+    }
   };
 
   // Clear recent searches
@@ -228,7 +235,7 @@ export default function Navbar() {
                     searchResults.map(article => (
                       <div
                         key={article.id}
-                        onClick={() => goToArticle(article)}
+                        onClick={() => goToArticle(article.id)}
                         className="p-4 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors border border-slate-100 group"
                       >
                         <div className="flex gap-3">

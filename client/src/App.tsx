@@ -28,6 +28,7 @@ function Router() {
       <Route path="/archive" component={Archive} />
       <Route path="/category/:cat" component={Home} /> {/* Re-use Home for categories for mockup */}
       <Route path="/article/:slug" component={ArticlePage} />
+      <Route path="/s/:code" component={ArticlePage} /> {/* Short link route handled server-side, but keep for client routing */}
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
       <Route path="/privacy" component={Privacy} />

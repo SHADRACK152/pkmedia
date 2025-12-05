@@ -287,14 +287,25 @@ export class Storage implements IStorage {
 
   // Short link operations
   async createShortLink(articleId: string): Promise<ShortLink> {
-    // Generate a random 7-character code (like trib.al)
-    const code = this.generateShortCode();
+    // Try up to 5 times to generate a unique code
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const code = this.generateShortCode();
+        
+        const [shortLink] = await db.insert(shortLinks)
+          .values({ code, articleId, clicks: 0 })
+          .returning();
+        
+        return shortLink;
+      } catch (error: any) {
+        // If unique constraint violation, try again with a new code
+        if (attempt === 4 || !error.message?.includes('unique')) {
+          throw error;
+        }
+      }
+    }
     
-    const [shortLink] = await db.insert(shortLinks)
-      .values({ code, articleId, clicks: 0 })
-      .returning();
-    
-    return shortLink;
+    throw new Error('Failed to generate unique short code');
   }
 
   async getShortLink(code: string): Promise<ShortLink | undefined> {

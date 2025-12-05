@@ -44,6 +44,40 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // IMPORTANT: Register short link redirect FIRST before any other routes
+  // This must come before Vite middleware which has a catch-all route
+  app.get("/s/:code", async (req, res) => {
+    try {
+      const shortLink = await storage.getShortLink(req.params.code);
+      
+      if (!shortLink) {
+        return res.status(404).send("Short link not found");
+      }
+      
+      // Increment click counter
+      await storage.incrementShortLinkClicks(req.params.code);
+      
+      // Get article to build slug
+      const article = await storage.getArticleById(shortLink.articleId);
+      if (!article) {
+        return res.status(404).send("Article not found");
+      }
+      
+      // Redirect to full article URL with slug
+      const slug = article.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim()
+        .substring(0, 60);
+      
+      res.redirect(`/article/${slug}__${article.id}`);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Configure passport for authentication
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -236,7 +270,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const article = await storage.createArticle(validatedData);
       
       // Automatically create a short link for the new article
-      await storage.createShortLink(article.id);
+      console.log(`[articles] Creating short link for new article ${article.id}`);
+      const shortLink = await storage.createShortLink(article.id);
+      console.log(`[articles] Short link created: ${shortLink.code}`);
       
       res.json(article);
     } catch (error: any) {
@@ -645,44 +681,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If no short link exists, create one
       if (!shortLink) {
+        console.log(`[short-link] Creating short link for article ${req.params.id}`);
         shortLink = await storage.createShortLink(req.params.id);
+        console.log(`[short-link] Created: ${shortLink.code}`);
       }
       
       res.json({ code: shortLink.code, url: `/s/${shortLink.code}` });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Redirect short link to full article URL
-  app.get("/s/:code", async (req, res) => {
-    try {
-      const shortLink = await storage.getShortLink(req.params.code);
-      
-      if (!shortLink) {
-        return res.status(404).send("Short link not found");
-      }
-      
-      // Increment click counter
-      await storage.incrementShortLinkClicks(req.params.code);
-      
-      // Get article to build slug
-      const article = await storage.getArticleById(shortLink.articleId);
-      if (!article) {
-        return res.status(404).send("Article not found");
-      }
-      
-      // Redirect to full article URL with slug
-      const slug = article.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim()
-        .substring(0, 60);
-      
-      res.redirect(`/article/${slug}__${article.id}`);
-    } catch (error: any) {
+      console.error(`[short-link] Error:`, error);
       res.status(500).json({ error: error.message });
     }
   });
