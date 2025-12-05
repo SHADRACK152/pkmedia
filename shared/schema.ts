@@ -44,6 +44,7 @@ export const articles = pgTable("articles", {
   image: text("image").notNull(),
   category: text("category").notNull(),
   author: text("author").notNull(),
+  tags: text("tags").array().default(sql`'{}'::text[]`), // Array of tags
   isBreaking: boolean("is_breaking").default(false),
   featured: boolean("featured").default(false),
   views: integer("views").default(0).notNull(),

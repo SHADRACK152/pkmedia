@@ -73,8 +73,10 @@ export default function AdminDashboard() {
     title: '',
     category: '',
     author: '',
-    image: ''
+    image: '',
+    tags: [] as string[]
   });
+  const [tagInput, setTagInput] = useState('');
 
   // Real Data Queries
   const { data: articles = [] } = useQuery<any[]>({
@@ -352,6 +354,7 @@ export default function AdminDashboard() {
       author: formData.author,
       image: imageUrl,
       content: articleContent,
+      tags: formData.tags,
       featured: (form.elements.namedItem('featured') as HTMLInputElement)?.checked || false,
       isBreaking: (form.elements.namedItem('breaking') as HTMLInputElement)?.checked || false,
     };
@@ -379,8 +382,10 @@ export default function AdminDashboard() {
       title: article?.title || '',
       category: article?.category || '',
       author: article?.author || '',
-      image: article?.image || ''
+      image: article?.image || '',
+      tags: article?.tags || []
     });
+    setTagInput('');
     setIsArticleSheetOpen(true);
   };
 
@@ -1337,6 +1342,88 @@ export default function AdminDashboard() {
                           className="py-6"
                         />
                       </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="tags" className="text-base font-semibold flex items-center gap-2">
+                        <Tags className="w-4 h-4" />
+                        Tags
+                      </Label>
+                      <p className="text-sm text-muted-foreground">Add relevant tags to help readers discover your article</p>
+                      
+                      {/* Tag Input with Suggestions */}
+                      <div className="flex gap-2">
+                        <div className="flex-1 relative">
+                          <Input 
+                            id="tags" 
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && tagInput.trim()) {
+                                e.preventDefault();
+                                if (!formData.tags.includes(tagInput.trim())) {
+                                  setFormData({...formData, tags: [...formData.tags, tagInput.trim()]});
+                                }
+                                setTagInput('');
+                              }
+                            }}
+                            placeholder="Type a tag and press Enter" 
+                            className="py-6"
+                          />
+                        </div>
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
+                              setFormData({...formData, tags: [...formData.tags, tagInput.trim()]});
+                              setTagInput('');
+                            }
+                          }}
+                          className="px-6 py-6"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      
+                      {/* Common Tags Suggestions */}
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs text-muted-foreground">Quick add:</span>
+                        {['Breaking News', 'Trending', 'Analysis', 'Opinion', 'Investigation', 'Exclusive'].map((tag) => (
+                          <Button
+                            key={tag}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (!formData.tags.includes(tag)) {
+                                setFormData({...formData, tags: [...formData.tags, tag]});
+                              }
+                            }}
+                            className="text-xs h-7"
+                          >
+                            {tag}
+                          </Button>
+                        ))}
+                      </div>
+                      
+                      {/* Selected Tags */}
+                      {formData.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-lg border">
+                          {formData.tags.map((tag, index) => (
+                            <Badge key={index} variant="secondary" className="px-3 py-1 text-sm">
+                              {tag}
+                              <button
+                                type="button"
+                                onClick={() => setFormData({...formData, tags: formData.tags.filter((_, i) => i !== index)})}
+                                className="ml-2 hover:text-destructive"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex justify-end mt-6">

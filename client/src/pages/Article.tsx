@@ -167,6 +167,17 @@ export default function ArticlePage() {
           <h1 className="text-3xl md:text-5xl font-serif font-bold leading-tight text-foreground mb-6">
             {article.title}
           </h1>
+          
+          {/* Tags Display */}
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {article.tags.map((tag: string, index: number) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-between border-b pb-6 gap-4">
             <div className="flex items-center gap-4">
