@@ -4,7 +4,6 @@ import { Clock, User, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useShortLink } from "@/hooks/use-short-link";
 
 interface ArticleCardProps {
   article: Article;
@@ -14,11 +13,9 @@ interface ArticleCardProps {
 export default function ArticleCard({ article, variant = "default" }: ArticleCardProps) {
   if (!article) return null;
   
-  const shortCode = useShortLink(article.id);
-  
-  // If short code is still loading (null) and article is new, wait a moment
-  // Otherwise use UUID as fallback for old articles
-  const articleUrl = shortCode ? `/s/${shortCode}` : `/article/${article.id}`;
+  // Always use direct UUID route for reliable navigation
+  // Short links are used for sharing, not internal navigation
+  const articleUrl = `/article/${article.id}`;
   
   const timeAgo = article.createdAt 
     ? formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })
