@@ -74,10 +74,12 @@ export default function AdminDashboard() {
     category: '',
     author: '',
     image: '',
+    images: [] as string[], // Multiple images for slideshow
     tags: [] as string[]
   });
   const [tagInput, setTagInput] = useState('');
   const [newTagName, setNewTagName] = useState('');
+  const [additionalImageUrl, setAdditionalImageUrl] = useState('');
 
   // Real Data Queries
   const { data: articles = [] } = useQuery<any[]>({
@@ -386,6 +388,7 @@ export default function AdminDashboard() {
       category: formData.category,
       author: formData.author,
       image: imageUrl,
+      images: formData.images, // Include additional images for slideshow
       content: articleContent,
       tags: formData.tags,
       featured: (form.elements.namedItem('featured') as HTMLInputElement)?.checked || false,
@@ -416,9 +419,11 @@ export default function AdminDashboard() {
       category: article?.category || '',
       author: article?.author || '',
       image: article?.image || '',
+      images: article?.images || [],
       tags: article?.tags || []
     });
     setTagInput('');
+    setAdditionalImageUrl('');
     setIsArticleSheetOpen(true);
   };
 
@@ -1599,6 +1604,56 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     )}
+                    
+                    {/* Additional Images for Slideshow */}
+                    <div className="space-y-3 mt-6 pt-6 border-t">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-base font-semibold">Additional Images (Optional)</Label>
+                          <p className="text-sm text-muted-foreground">Add more images to create a slideshow at the top of the article</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Input 
+                          value={additionalImageUrl}
+                          onChange={(e) => setAdditionalImageUrl(e.target.value)}
+                          placeholder="https://example.com/image2.jpg" 
+                          className="flex-1"
+                        />
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (additionalImageUrl.trim()) {
+                              setFormData({...formData, images: [...formData.images, additionalImageUrl.trim()]});
+                              setAdditionalImageUrl('');
+                            }
+                          }}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add
+                        </Button>
+                      </div>
+                      
+                      {/* Display added images */}
+                      {formData.images.length > 0 && (
+                        <div className="grid grid-cols-3 gap-3">
+                          {formData.images.map((img, index) => (
+                            <div key={index} className="relative group aspect-video bg-slate-100 rounded-lg overflow-hidden border">
+                              <img src={img} alt={`Additional ${index + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setFormData({...formData, images: formData.images.filter((_, i) => i !== index)})}
+                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     
                     <div className="flex justify-between mt-6">
                       <Button 

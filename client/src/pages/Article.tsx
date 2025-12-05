@@ -134,25 +134,66 @@ export default function ArticlePage() {
       
       <main className="flex-1">
         
-        {/* Featured Image at the top */}
-        {article.image && (
-          <div className="relative w-full aspect-[21/9] md:aspect-[21/8] bg-slate-100 overflow-hidden">
-            {isVideo(article.image) ? (
-              <video
-                src={article.image}
-                controls
-                autoPlay
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <img 
-                src={article.image} 
-                alt={article.title} 
-                className="w-full h-full object-cover"
-              />
-            )}
-          </div>
-        )}
+        {/* Featured Image Slideshow at the top */}
+        {(article.image || (article.images && article.images.length > 0)) && (() => {
+          const [currentIndex, setCurrentIndex] = useState(0);
+          const allImages = [article.image, ...(article.images || [])].filter(Boolean);
+          
+          useEffect(() => {
+            if (allImages.length > 1) {
+              const interval = setInterval(() => {
+                setCurrentIndex((prev) => (prev + 1) % allImages.length);
+              }, 4000); // Change image every 4 seconds
+              
+              return () => clearInterval(interval);
+            }
+          }, [allImages.length]);
+          
+          return (
+            <div className="relative w-full aspect-[21/9] md:aspect-[21/8] bg-slate-100 overflow-hidden group">
+              {allImages.map((img, index) => (
+                <div
+                  key={index}
+                  className={`absolute inset-0 transition-opacity duration-1000 ${
+                    index === currentIndex ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  {isVideo(img) ? (
+                    <video
+                      src={img}
+                      controls
+                      autoPlay
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <img 
+                      src={img} 
+                      alt={`${article.title} - Image ${index + 1}`} 
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+              ))}
+              
+              {/* Slideshow indicators */}
+              {allImages.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                  {allImages.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentIndex(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentIndex 
+                          ? 'bg-white w-8' 
+                          : 'bg-white/50 hover:bg-white/75'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-4 cursor-pointer">

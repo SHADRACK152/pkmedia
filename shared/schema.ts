@@ -56,6 +56,7 @@ export const articles = pgTable("articles", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   image: text("image").notNull(),
+  images: text("images").array().default(sql`'{}'::text[]`), // Multiple images for slideshow
   category: text("category").notNull(),
   author: text("author").notNull(),
   tags: text("tags").array().default(sql`'{}'::text[]`), // Array of tags
