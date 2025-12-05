@@ -1,6 +1,6 @@
 import { db } from "./db.js";
-import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks } from "../shared/schema.js";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink } from "../shared/schema.js";
+import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks, newsletterSubscribers } from "../shared/schema.js";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink, NewsletterSubscriber, InsertNewsletterSubscriber } from "../shared/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -61,6 +61,13 @@ export interface IStorage {
   getShortLink(code: string): Promise<ShortLink | undefined>;
   getShortLinkByArticleId(articleId: string): Promise<ShortLink | undefined>;
   incrementShortLinkClicks(code: string): Promise<void>;
+  
+  // Newsletter operations
+  subscribeNewsletter(subscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber>;
+  getAllSubscribers(): Promise<NewsletterSubscriber[]>;
+  getActiveSubscribers(): Promise<NewsletterSubscriber[]>;
+  unsubscribeNewsletter(email: string): Promise<boolean>;
+  deleteSubscriber(id: string): Promise<boolean>;
 }
 
 export class Storage implements IStorage {
@@ -342,6 +349,47 @@ export class Storage implements IStorage {
     await db.update(shortLinks)
       .set({ clicks: sql`${shortLinks.clicks} + 1` })
       .where(eq(shortLinks.code, code));
+  }
+
+  // Newsletter operations
+  async subscribeNewsletter(insertSubscriber: InsertNewsletterSubscriber): Promise<NewsletterSubscriber> {
+    const [subscriber] = await db.insert(newsletterSubscribers)
+      .values(insertSubscriber)
+      .onConflictDoUpdate({
+        target: newsletterSubscribers.email,
+        set: { 
+          status: 'active',
+          unsubscribedAt: null
+        }
+      })
+      .returning();
+    return subscriber;
+  }
+
+  async getAllSubscribers(): Promise<NewsletterSubscriber[]> {
+    return await db.select().from(newsletterSubscribers).orderBy(desc(newsletterSubscribers.subscribedAt));
+  }
+
+  async getActiveSubscribers(): Promise<NewsletterSubscriber[]> {
+    return await db.select()
+      .from(newsletterSubscribers)
+      .where(eq(newsletterSubscribers.status, 'active'))
+      .orderBy(desc(newsletterSubscribers.subscribedAt));
+  }
+
+  async unsubscribeNewsletter(email: string): Promise<boolean> {
+    const result = await db.update(newsletterSubscribers)
+      .set({ 
+        status: 'unsubscribed',
+        unsubscribedAt: new Date()
+      })
+      .where(eq(newsletterSubscribers.email, email));
+    return result.count > 0;
+  }
+
+  async deleteSubscriber(id: string): Promise<boolean> {
+    const result = await db.delete(newsletterSubscribers).where(eq(newsletterSubscribers.id, id));
+    return result.count > 0;
   }
 
   private generateShortCode(): string {

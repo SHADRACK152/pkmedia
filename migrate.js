@@ -16,7 +16,7 @@ async function migrate() {
   try {
     console.log('Running migration...');
     
-    const sql = fs.readFileSync('migrations/006_add_article_images_array.sql', 'utf8');
+    const sql = fs.readFileSync('migrations/007_create_newsletter_subscribers.sql', 'utf8');
     await client.query(sql);
     
     console.log('✓ Migration completed successfully!');

@@ -102,6 +102,10 @@ export default function AdminDashboard() {
     queryKey: ['/api/comments'],
   });
 
+  const { data: subscribers = [] } = useQuery<any[]>({
+    queryKey: ['/api/newsletter/subscribers'],
+  });
+
   const { data: ads = [] } = useQuery<Ad[]>({
     queryKey: ['/api/ads'],
   });
@@ -565,6 +569,13 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('comments')}
         >
           <MessageSquare className="mr-2 h-4 w-4" /> Comments
+        </Button>
+        <Button 
+          variant="ghost" 
+          className={`w-full justify-start ${activeTab === 'newsletter' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
+          onClick={() => setActiveTab('newsletter')}
+        >
+          <Megaphone className="mr-2 h-4 w-4" /> Newsletter
         </Button>
         <Button 
           variant="ghost" 
@@ -1276,6 +1287,80 @@ export default function AdminDashboard() {
                       </CardContent>
                   </Card>
               </div>
+          )}
+
+          {/* NEWSLETTER TAB */}
+          {activeTab === 'newsletter' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold">Newsletter Subscribers</h2>
+                <Badge variant="secondary">{subscribers.length} Total</Badge>
+              </div>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Subscribed</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {subscribers.map((subscriber: any) => (
+                        <TableRow key={subscriber.id}>
+                          <TableCell className="font-medium">{subscriber.email}</TableCell>
+                          <TableCell>{subscriber.name || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant={subscriber.status === 'active' ? 'default' : 'secondary'}>
+                              {subscriber.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(subscriber.subscribedAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={async () => {
+                                if (confirm(`Delete subscriber ${subscriber.email}?`)) {
+                                  try {
+                                    await apiRequest(`/api/newsletter/subscribers/${subscriber.id}`, {
+                                      method: 'DELETE',
+                                    });
+                                    queryClient.invalidateQueries({ queryKey: ['/api/newsletter/subscribers'] });
+                                    toast({ title: "Subscriber deleted" });
+                                  } catch (error) {
+                                    toast({ 
+                                      title: "Error", 
+                                      description: "Failed to delete subscriber",
+                                      variant: "destructive" 
+                                    });
+                                  }
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {subscribers.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground">
+                            No subscribers yet
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* ADS TAB */}

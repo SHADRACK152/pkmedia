@@ -799,6 +799,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Newsletter routes
+  // Subscribe to newsletter (public)
+  app.post("/api/newsletter/subscribe", async (req, res) => {
+    try {
+      const { email, name } = req.body;
+      
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ error: "Valid email is required" });
+      }
+
+      const subscriber = await storage.subscribeNewsletter({
+        email: email.toLowerCase().trim(),
+        name: name?.trim() || null,
+        status: 'active'
+      });
+
+      res.json({ message: "Successfully subscribed to newsletter", subscriber });
+    } catch (error: any) {
+      console.error("[newsletter] Subscribe error:", error);
+      res.status(500).json({ error: "Failed to subscribe" });
+    }
+  });
+
+  // Get all newsletter subscribers (admin only)
+  app.get("/api/newsletter/subscribers", requireAdmin, async (req, res) => {
+    try {
+      const subscribers = await storage.getAllSubscribers();
+      res.json(subscribers);
+    } catch (error: any) {
+      console.error("[newsletter] Get subscribers error:", error);
+      res.status(500).json({ error: "Failed to fetch subscribers" });
+    }
+  });
+
+  // Unsubscribe from newsletter (public)
+  app.post("/api/newsletter/unsubscribe", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const success = await storage.unsubscribeNewsletter(email.toLowerCase().trim());
+      
+      if (success) {
+        res.json({ message: "Successfully unsubscribed from newsletter" });
+      } else {
+        res.status(404).json({ error: "Subscriber not found" });
+      }
+    } catch (error: any) {
+      console.error("[newsletter] Unsubscribe error:", error);
+      res.status(500).json({ error: "Failed to unsubscribe" });
+    }
+  });
+
+  // Delete subscriber (admin only)
+  app.delete("/api/newsletter/subscribers/:id", requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteSubscriber(req.params.id);
+      
+      if (success) {
+        res.json({ message: "Subscriber deleted successfully" });
+      } else {
+        res.status(404).json({ error: "Subscriber not found" });
+      }
+    } catch (error: any) {
+      console.error("[newsletter] Delete subscriber error:", error);
+      res.status(500).json({ error: "Failed to delete subscriber" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

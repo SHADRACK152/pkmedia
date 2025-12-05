@@ -21,27 +21,20 @@ export default function Footer() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/newsletter", {
+      const res = await fetch("/api/newsletter/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
       if (!res.ok) {
-        // fallback to localStorage if endpoint not available
-        const existing = JSON.parse(localStorage.getItem("pk_newsletter") || "[]");
-        existing.push({ email, date: new Date().toISOString() });
-        localStorage.setItem("pk_newsletter", JSON.stringify(existing));
-        toast({ title: "Saved locally", description: "Newsletter subscription saved locally." });
-      } else {
-        toast({ title: "Subscribed", description: "Thanks — we added you to our newsletter." });
+        throw new Error("Failed to subscribe");
       }
+      
+      toast({ title: "Subscribed!", description: "Thanks for subscribing to our newsletter." });
       setEmail("");
     } catch (err: any) {
-      const existing = JSON.parse(localStorage.getItem("pk_newsletter") || "[]");
-      existing.push({ email, date: new Date().toISOString() });
-      localStorage.setItem("pk_newsletter", JSON.stringify(existing));
-      toast({ title: "Saved locally", description: "Unable to reach server; subscription saved locally." });
+      toast({ title: "Error", description: "Unable to subscribe. Please try again later.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
