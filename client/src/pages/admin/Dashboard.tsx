@@ -1294,8 +1294,37 @@ export default function AdminDashboard() {
           {activeTab === 'newsletter' && (
             <div className="space-y-6 animate-in fade-in duration-500">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold">Newsletter Subscribers</h2>
-                <Badge variant="secondary">{subscribers.length} Total</Badge>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-lg font-bold">Newsletter Subscribers</h2>
+                  <Badge variant="secondary">{subscribers.length} Total</Badge>
+                  <Badge variant="default">
+                    {subscribers.filter((s: any) => s.status === 'active').length} Active
+                  </Badge>
+                </div>
+                <Button 
+                  onClick={async () => {
+                    if (!confirm('Send newsletter to all active subscribers?')) return;
+                    
+                    try {
+                      const response = await apiRequest('/api/newsletter/send', {
+                        method: 'POST',
+                      });
+                      toast({ 
+                        title: "Newsletter sent!",
+                        description: `Sent to ${response.success} subscribers`
+                      });
+                    } catch (error) {
+                      toast({ 
+                        title: "Error", 
+                        description: "Failed to send newsletter",
+                        variant: "destructive" 
+                      });
+                    }
+                  }}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  <Megaphone className="mr-2 h-4 w-4" /> Send Newsletter
+                </Button>
               </div>
 
               <Card>

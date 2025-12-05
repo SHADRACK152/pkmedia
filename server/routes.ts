@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { callGrok } from "./ai.js";
+import { sendWelcomeEmail, sendNewsletterEmail } from "./email.js";
 import { insertArticleSchema, insertCategorySchema, insertTagSchema, insertCommentSchema, insertUserSchema, insertAdSchema } from "../shared/schema.js";
 import { z } from "zod";
 import passport from "passport";
@@ -815,6 +816,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'active'
       });
 
+      // Send welcome email (don't wait for it to avoid delaying response)
+      if (process.env.RESEND_API_KEY) {
+        sendWelcomeEmail(subscriber.email).catch(err => {
+          console.error("[newsletter] Failed to send welcome email:", err);
+        });
+      }
+
       res.json({ message: "Successfully subscribed to newsletter", subscriber });
     } catch (error: any) {
       console.error("[newsletter] Subscribe error:", error);
@@ -868,6 +876,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[newsletter] Delete subscriber error:", error);
       res.status(500).json({ error: "Failed to delete subscriber" });
+    }
+  });
+
+  // Send newsletter to all subscribers (admin only)
+  app.post("/api/newsletter/send", requireAdmin, async (req, res) => {
+    try {
+      if (!process.env.RESEND_API_KEY) {
+        return res.status(500).json({ error: "Email service not configured" });
+      }
+
+      const subscribers = await storage.getActiveSubscribers();
+      
+      if (subscribers.length === 0) {
+        return res.status(400).json({ error: "No active subscribers" });
+      }
+
+      // Get latest 5 articles for the newsletter
+      const articles = await storage.getAllArticles();
+      const latestArticles = articles.slice(0, 5).map((article: any) => ({
+        title: article.title,
+        excerpt: article.excerpt || article.content.substring(0, 150) + '...',
+        url: `${process.env.APP_URL || 'https://pkmedia.vercel.app'}/article/${article.id}`,
+        image: article.image,
+        category: article.category || 'News',
+      }));
+
+      // Send emails (in background, don't wait)
+      const sendPromises = subscribers.map(sub => 
+        sendNewsletterEmail({
+          to: sub.email,
+          articles: latestArticles,
+        }).catch(err => {
+          console.error(`Failed to send to ${sub.email}:`, err);
+          return null;
+        })
+      );
+
+      // Wait for all emails to be sent
+      const results = await Promise.allSettled(sendPromises);
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
+      const failCount = results.filter(r => r.status === 'rejected' || r.value === null).length;
+
+      res.json({ 
+        message: "Newsletter sent",
+        total: subscribers.length,
+        success: successCount,
+        failed: failCount
+      });
+    } catch (error: any) {
+      console.error("[newsletter] Send error:", error);
+      res.status(500).json({ error: "Failed to send newsletter" });
     }
   });
 

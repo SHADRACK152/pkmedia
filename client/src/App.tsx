@@ -19,6 +19,7 @@ import Settings from "@/pages/Settings";
 import Chatbot from "@/components/ui/chatbot";
 import ChatPage from "@/pages/Chat";
 import Register from "@/pages/Register";
+import Unsubscribe from "@/pages/Unsubscribe";
 import { useEffect } from "react";
 
 function Router() {
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
+      <Route path="/unsubscribe" component={Unsubscribe} />
       <Route path="/login" component={AdminLogin} />
         <Route path="/register" component={Register} />
       
