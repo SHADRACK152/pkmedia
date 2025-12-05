@@ -1481,26 +1481,28 @@ export default function AdminDashboard() {
                         </Button>
                       </div>
                       
-                      {/* Common Tags Suggestions */}
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-xs text-muted-foreground">Quick add:</span>
-                        {['Breaking News', 'Trending', 'Analysis', 'Opinion', 'Investigation', 'Exclusive'].map((tag) => (
-                          <Button
-                            key={tag}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              if (!formData.tags.includes(tag)) {
-                                setFormData({...formData, tags: [...formData.tags, tag]});
-                              }
-                            }}
-                            className="text-xs h-7"
-                          >
-                            {tag}
-                          </Button>
-                        ))}
-                      </div>
+                      {/* Available Tags from Database */}
+                      {availableTags.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          <span className="text-xs text-muted-foreground">Available tags:</span>
+                          {availableTags.map((tag: any) => (
+                            <Button
+                              key={tag.id}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (!formData.tags.includes(tag.name)) {
+                                  setFormData({...formData, tags: [...formData.tags, tag.name]});
+                                }
+                              }}
+                              className="text-xs h-7"
+                            >
+                              {tag.name}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                       
                       {/* Selected Tags */}
                       {formData.tags.length > 0 && (
