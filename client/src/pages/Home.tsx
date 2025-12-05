@@ -9,10 +9,14 @@ import { ArrowRight, ChevronRight, TrendingUp, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { Article, Category } from "@shared/schema";
 import ArticleCard from "@/components/news/ArticleCard";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [visibleCount, setVisibleCount] = useState(6);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setVisibleCount(6);
@@ -46,6 +50,48 @@ export default function Home() {
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;
   }).slice(0, 5);
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newsletterEmail || !newsletterEmail.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubscribing(true);
+
+    try {
+      const response = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newsletterEmail }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to subscribe");
+      }
+
+      toast({
+        title: "Successfully subscribed!",
+        description: "You'll receive The Morning Brief every day",
+      });
+
+      setNewsletterEmail("");
+    } catch (error) {
+      toast({
+        title: "Subscription failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col font-sans">
@@ -184,19 +230,26 @@ export default function Home() {
                 Start your day with the most important stories from PKMedia.
               </p>
               
-              <div className="relative z-10 space-y-4">
+              <form onSubmit={handleNewsletterSubmit} className="relative z-10 space-y-4">
                 <input 
                     type="email" 
-                    placeholder="Your email address" 
+                    placeholder="Your email address"
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    disabled={isSubscribing}
                     className="w-full px-5 py-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm backdrop-blur-sm transition-all" 
                 />
-                <Button className="w-full bg-primary hover:bg-primary/90 font-bold py-6 shadow-xl shadow-primary/30 rounded-xl text-base">
-                    Subscribe Free →
+                <Button 
+                  type="submit"
+                  disabled={isSubscribing}
+                  className="w-full bg-primary hover:bg-primary/90 font-bold py-6 shadow-xl shadow-primary/30 rounded-xl text-base"
+                >
+                    {isSubscribing ? "Subscribing..." : "Subscribe Free →"}
                 </Button>
                 <p className="text-[11px] text-slate-400 mt-3">
                     ✓ Unsubscribe anytime · No spam · Privacy protected
                 </p>
-              </div>
+              </form>
             </div>
             
             {/* Ad Space / Promo */}
