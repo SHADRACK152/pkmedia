@@ -29,7 +29,8 @@ import {
   AlertCircle,
   TrendingUp,
   Clock,
-  Megaphone
+  Megaphone,
+  Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -575,7 +576,7 @@ export default function AdminDashboard() {
           className={`w-full justify-start ${activeTab === 'newsletter' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
           onClick={() => setActiveTab('newsletter')}
         >
-          <Megaphone className="mr-2 h-4 w-4" /> Newsletter
+          <Mail className="mr-2 h-4 w-4" /> Newsletter
         </Button>
         <Button 
           variant="ghost" 
