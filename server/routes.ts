@@ -76,10 +76,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fullUrl = `${req.protocol}://${req.get('host')}${articleUrl}`;
       const shortUrl = `${req.protocol}://${req.get('host')}/s/${req.params.code}`;
       
-      // Clean content for description
+      // Clean content for description - escape HTML entities
       const description = article.content 
-        ? article.content.replace(/<[^>]*>/g, '').substring(0, 160)
+        ? article.content
+            .replace(/<[^>]*>/g, '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .substring(0, 160)
         : '';
+      
+      // Escape title for HTML
+      const safeTitle = article.title
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
       
       // Ensure absolute image URL
       const imageUrl = article.image?.startsWith('http') 
@@ -88,51 +101,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check if this is a bot/crawler (WhatsApp, Facebook, Twitter, etc.)
       const userAgent = req.get('user-agent') || '';
-      const isBot = /WhatsApp|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|TelegramBot/i.test(userAgent);
+      const isBot = /WhatsApp|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|TelegramBot|bot|crawler|spider/i.test(userAgent);
       
       if (isBot) {
         // Serve HTML with Open Graph tags for bots/social media crawlers
-        return res.send(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <title>${article.title} - PKMedia</title>
-              <meta name="description" content="${description}">
-              
-              <!-- Open Graph / Facebook / WhatsApp -->
-              <meta property="og:type" content="article">
-              <meta property="og:site_name" content="PKMedia">
-              <meta property="og:url" content="${shortUrl}">
-              <meta property="og:title" content="${article.title}">
-              <meta property="og:description" content="${description}">
-              <meta property="og:image" content="${imageUrl}">
-              <meta property="og:image:secure_url" content="${imageUrl}">
-              <meta property="og:image:type" content="image/jpeg">
-              <meta property="og:image:width" content="1200">
-              <meta property="og:image:height" content="630">
-              <meta property="og:image:alt" content="${article.title}">
-              
-              <!-- Twitter -->
-              <meta name="twitter:card" content="summary_large_image">
-              <meta name="twitter:url" content="${shortUrl}">
-              <meta name="twitter:title" content="${article.title}">
-              <meta name="twitter:description" content="${description}">
-              <meta name="twitter:image" content="${imageUrl}">
-              
-              <meta http-equiv="refresh" content="0;url=${articleUrl}">
-            </head>
-            <body>
-              <p>Redirecting...</p>
-              <script>window.location.href="${articleUrl}";</script>
-            </body>
-          </html>
-        `);
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${safeTitle} - PKMedia</title>
+  <meta name="description" content="${description}">
+  
+  <!-- Open Graph / Facebook / WhatsApp -->
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="PKMedia">
+  <meta property="og:url" content="${shortUrl}">
+  <meta property="og:title" content="${safeTitle}">
+  <meta property="og:description" content="${description}">
+  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:image:secure_url" content="${imageUrl}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="${safeTitle}">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="${shortUrl}">
+  <meta name="twitter:title" content="${safeTitle}">
+  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:image" content="${imageUrl}">
+  
+  <meta http-equiv="refresh" content="0;url=${articleUrl}">
+</head>
+<body>
+  <h1>${safeTitle}</h1>
+  <p>Redirecting to article...</p>
+  <script>window.location.href="${articleUrl}";</script>
+</body>
+</html>`);
       }
       
       // For regular users, do instant redirect
       res.redirect(articleUrl);
     } catch (error: any) {
+      console.error('Short link error:', error);
       res.status(500).json({ error: error.message });
     }
   });
