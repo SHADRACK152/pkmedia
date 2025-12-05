@@ -8,6 +8,7 @@ import passport from "passport";
 import { storage } from "./storage.js";
 import bcrypt from "bcryptjs";
 import { registerRoutes } from "./routes.js";
+import { runStartupMigrations } from "./migrations.js";
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -99,6 +100,9 @@ app.use((req, res, next) => {
 export default async function runApp(
   setup: (app: Express, server: Server) => Promise<void>,
 ) {
+  // Run startup migrations
+  await runStartupMigrations();
+  
   const server = await registerRoutes(app);
 
   // verify DB connections before serving

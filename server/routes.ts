@@ -320,6 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const articles = await storage.getAllArticles();
       res.json(articles);
     } catch (error: any) {
+      console.error("Error fetching articles:", error);
       res.status(500).json({ error: error.message });
     }
   });
