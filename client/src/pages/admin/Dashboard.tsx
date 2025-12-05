@@ -91,7 +91,7 @@ export default function AdminDashboard() {
     queryKey: ['/api/categories'],
   });
 
-  const { data: tags: availableTags = [] } = useQuery<any[]>({
+  const { data: availableTags = [] } = useQuery<any[]>({
     queryKey: ['/api/tags'],
   });
 
