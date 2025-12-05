@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { callGrok } from "./ai.js";
-import { insertArticleSchema, insertCategorySchema, insertCommentSchema, insertUserSchema, insertAdSchema } from "../shared/schema.js";
+import { insertArticleSchema, insertCategorySchema, insertTagSchema, insertCommentSchema, insertUserSchema, insertAdSchema } from "../shared/schema.js";
 import { z } from "zod";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
@@ -420,6 +420,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = await storage.deleteCategory(req.params.id);
       if (!success) {
         return res.status(404).json({ error: "Category not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Tag routes
+  app.get("/api/tags", async (req, res) => {
+    try {
+      const tags = await storage.getAllTags();
+      res.json(tags);
+    } catch (error: any) {
+      console.error("Error fetching tags:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/tags", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertTagSchema.parse(req.body);
+      const tag = await storage.createTag(validatedData);
+      res.json(tag);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/tags/:id", requireAdmin, async (req, res) => {
+    try {
+      const success = await storage.deleteTag(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Tag not found" });
       }
       res.json({ success: true });
     } catch (error: any) {

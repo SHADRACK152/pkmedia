@@ -1,6 +1,6 @@
 import { db } from "./db.js";
-import { users, articles, categories, comments, ads, dailyStats, shortLinks } from "../shared/schema.js";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink } from "../shared/schema.js";
+import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks } from "../shared/schema.js";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink } from "../shared/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -27,6 +27,11 @@ export interface IStorage {
   getAllCategories(): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
   deleteCategory(id: string): Promise<boolean>;
+  
+  // Tag operations
+  getAllTags(): Promise<Tag[]>;
+  createTag(tag: InsertTag): Promise<Tag>;
+  deleteTag(id: string): Promise<boolean>;
   
   // Comment operations
   getCommentsByArticle(articleId: string): Promise<Comment[]>;
@@ -161,6 +166,21 @@ export class Storage implements IStorage {
 
   async deleteCategory(id: string): Promise<boolean> {
     const result = await db.delete(categories).where(eq(categories.id, id));
+    return result.count > 0;
+  }
+
+  // Tag operations
+  async getAllTags(): Promise<Tag[]> {
+    return await db.select().from(tags).orderBy(tags.name);
+  }
+
+  async createTag(insertTag: InsertTag): Promise<Tag> {
+    const [tag] = await db.insert(tags).values(insertTag).returning();
+    return tag;
+  }
+
+  async deleteTag(id: string): Promise<boolean> {
+    const result = await db.delete(tags).where(eq(tags.id, id));
     return result.count > 0;
   }
 

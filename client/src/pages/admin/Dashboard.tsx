@@ -77,6 +77,7 @@ export default function AdminDashboard() {
     tags: [] as string[]
   });
   const [tagInput, setTagInput] = useState('');
+  const [newTagName, setNewTagName] = useState('');
 
   // Real Data Queries
   const { data: articles = [] } = useQuery<any[]>({
@@ -85,6 +86,10 @@ export default function AdminDashboard() {
 
   const { data: categories = [] } = useQuery<any[]>({
     queryKey: ['/api/categories'],
+  });
+
+  const { data: tags: availableTags = [] } = useQuery<any[]>({
+    queryKey: ['/api/tags'],
   });
 
   const { data: users = [] } = useQuery<any[]>({
@@ -257,6 +262,34 @@ export default function AdminDashboard() {
     }
   });
 
+  const createTagMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/tags", { name });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+      toast({ title: "Tag Added", description: "New tag created." });
+      setNewTagName("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const deleteTagMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/tags/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
+      toast({ title: "Tag Deleted", description: "Tag removed." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
   const updateCommentStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string, status: string }) => {
       const res = await apiRequest("PATCH", `/api/comments/${id}/status`, { status });
@@ -395,6 +428,12 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAddTag = () => {
+    if (newTagName.trim()) {
+      createTagMutation.mutate(newTagName);
+    }
+  };
+
   const handleSaveSettings = () => {
     setIsSaving(true);
     setTimeout(() => {
@@ -500,6 +539,13 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('categories')}
         >
           <Tags className="mr-2 h-4 w-4" /> Categories
+        </Button>
+        <Button 
+          variant="ghost" 
+          className={`w-full justify-start ${activeTab === 'tags' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
+          onClick={() => setActiveTab('tags')}
+        >
+          <Tags className="mr-2 h-4 w-4" /> Tags
         </Button>
         <Button 
           variant="ghost" 
@@ -922,6 +968,55 @@ export default function AdminDashboard() {
                               </CardContent>
                           </Card>
                       ))}
+                  </div>
+              </div>
+          )}
+
+          {/* TAGS TAB */}
+          {activeTab === 'tags' && (
+              <div className="space-y-6 animate-in fade-in duration-500">
+                  <div className="flex justify-between items-center">
+                      <h2 className="text-lg font-bold">Manage Tags</h2>
+                      <div className="flex gap-2">
+                          <Input 
+                            placeholder="New Tag Name" 
+                            className="w-64" 
+                            value={newTagName}
+                            onChange={(e) => setNewTagName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && newTagName.trim()) {
+                                handleAddTag();
+                              }
+                            }}
+                          />
+                          <Button onClick={handleAddTag} disabled={createTagMutation.isPending}>
+                            <Plus className="mr-2 h-4 w-4" /> Add
+                          </Button>
+                      </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                      {availableTags.map((tag: any) => (
+                          <Card key={tag.id} className="group hover:border-primary transition-colors">
+                              <CardContent className="p-3 flex justify-between items-center">
+                                  <Badge variant="secondary" className="text-sm">{tag.name}</Badge>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-7 w-7 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => {
+                                      if(confirm(`Delete tag "${tag.name}"?`)) deleteTagMutation.mutate(tag.id);
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                              </CardContent>
+                          </Card>
+                      ))}
+                      {availableTags.length === 0 && (
+                        <div className="col-span-full text-center py-10 text-muted-foreground">
+                          No tags yet. Add your first tag above.
+                        </div>
+                      )}
                   </div>
               </div>
           )}
@@ -1389,22 +1484,25 @@ export default function AdminDashboard() {
                       {/* Common Tags Suggestions */}
                       <div className="flex flex-wrap gap-2">
                         <span className="text-xs text-muted-foreground">Quick add:</span>
-                        {['Breaking News', 'Trending', 'Analysis', 'Opinion', 'Investigation', 'Exclusive'].map((tag) => (
+                        {availableTags.slice(0, 8).map((tag: any) => (
                           <Button
-                            key={tag}
+                            key={tag.id}
                             type="button"
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              if (!formData.tags.includes(tag)) {
-                                setFormData({...formData, tags: [...formData.tags, tag]});
+                              if (!formData.tags.includes(tag.name)) {
+                                setFormData({...formData, tags: [...formData.tags, tag.name]});
                               }
                             }}
                             className="text-xs h-7"
                           >
-                            {tag}
+                            {tag.name}
                           </Button>
                         ))}
+                        {availableTags.length === 0 && (
+                          <span className="text-xs text-muted-foreground italic">No tags available. Add tags in Settings.</span>
+                        )}
                       </div>
                       
                       {/* Selected Tags */}
