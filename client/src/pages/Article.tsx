@@ -132,9 +132,29 @@ export default function ArticlePage() {
       <BreakingNewsTicker />
       <Navbar />
       
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+      <main className="flex-1">
         
-        <div className="mb-6">
+        {/* Featured Image at the top */}
+        {article.image && (
+          <div className="relative w-full aspect-[21/9] md:aspect-[21/8] bg-slate-100 overflow-hidden">
+            {isVideo(article.image) ? (
+              <video
+                src={article.image}
+                controls
+                autoPlay
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <img 
+                src={article.image} 
+                alt={article.title} 
+                className="w-full h-full object-cover"
+              />
+            )}
+          </div>
+        )}
+
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
           <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-4 cursor-pointer">
             <ChevronLeft className="w-4 h-4 mr-1" /> Back to News
           </Link>
@@ -187,30 +207,6 @@ export default function ArticlePage() {
               />
             </div>
           </div>
-        </div>
-
-        {article.image && (
-          <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-lg mb-8 bg-slate-100">
-            {isVideo(article.image) ? (
-              <video
-                src={article.image}
-                controls
-                autoPlay
-                className="w-full h-full object-contain"
-              />
-            ) : (
-              <img 
-                src={article.image} 
-                alt={article.title} 
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  console.error('Image failed to load:', article.image);
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            )}
-          </div>
-        )}
 
         <article className="prose prose-lg prose-blue max-w-none font-serif text-foreground/80">
           <div 
@@ -300,6 +296,7 @@ export default function ArticlePage() {
 
         <CommentSection articleId={id} />
 
+        </div>
       </main>
       <Footer />
     </div>
