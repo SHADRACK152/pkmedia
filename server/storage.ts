@@ -1,6 +1,6 @@
 import { db } from "./db.js";
-import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks, newsletterSubscribers } from "../shared/schema.js";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink, NewsletterSubscriber, InsertNewsletterSubscriber } from "../shared/schema.js";
+import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks, newsletterSubscribers, pushSubscriptions } from "../shared/schema.js";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink, NewsletterSubscriber, InsertNewsletterSubscriber, PushSubscription, InsertPushSubscription } from "../shared/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -68,6 +68,11 @@ export interface IStorage {
   getActiveSubscribers(): Promise<NewsletterSubscriber[]>;
   unsubscribeNewsletter(email: string): Promise<boolean>;
   deleteSubscriber(id: string): Promise<boolean>;
+  
+  // Push Notification operations
+  savePushSubscription(subscription: any): Promise<PushSubscription>;
+  getAllPushSubscriptions(): Promise<PushSubscription[]>;
+  removePushSubscription(endpoint: string): Promise<boolean>;
 }
 
 export class Storage implements IStorage {
@@ -389,6 +394,39 @@ export class Storage implements IStorage {
 
   async deleteSubscriber(id: string): Promise<boolean> {
     const result = await db.delete(newsletterSubscribers).where(eq(newsletterSubscribers.id, id));
+    return result.count > 0;
+  }
+
+  // Push Notification operations
+  async savePushSubscription(subscription: any): Promise<PushSubscription> {
+    const { endpoint, keys } = subscription;
+    
+    // Check if subscription already exists
+    const existing = await db.select()
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, endpoint))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    const [sub] = await db.insert(pushSubscriptions).values({
+      endpoint,
+      p256dh: keys.p256dh,
+      auth: keys.auth,
+    }).returning();
+    
+    return sub;
+  }
+
+  async getAllPushSubscriptions(): Promise<PushSubscription[]> {
+    return await db.select().from(pushSubscriptions);
+  }
+
+  async removePushSubscription(endpoint: string): Promise<boolean> {
+    const result = await db.delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.endpoint, endpoint));
     return result.count > 0;
   }
 

@@ -348,6 +348,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shortLink = await storage.createShortLink(article.id);
       console.log(`[articles] Short link created: ${shortLink.code}`);
       
+      // Send push notifications to all subscribers
+      try {
+        const subscriptions = await storage.getAllPushSubscriptions();
+        
+        if (subscriptions.length > 0) {
+          const webpush = await import('web-push');
+          const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+          const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+          
+          if (vapidPublicKey && vapidPrivateKey) {
+            webpush.default.setVapidDetails(
+              'mailto:admin@pkmedia.co.ke',
+              vapidPublicKey,
+              vapidPrivateKey
+            );
+
+            const payload = JSON.stringify({
+              title: article.isBreaking ? '🚨 Breaking News!' : '📰 New Article',
+              body: article.title,
+              url: `/article/${article.id}`,
+              image: article.image,
+              articleId: article.id,
+              icon: '/logo.png',
+              badge: '/logo.png'
+            });
+
+            let successCount = 0;
+            const sendPromises = subscriptions.map(async (sub: any) => {
+              try {
+                await webpush.default.sendNotification({
+                  endpoint: sub.endpoint,
+                  keys: {
+                    p256dh: sub.p256dh,
+                    auth: sub.auth
+                  }
+                }, payload);
+                successCount++;
+              } catch (error: any) {
+                // Remove invalid subscriptions
+                if (error.statusCode === 410) {
+                  await storage.removePushSubscription(sub.endpoint);
+                }
+              }
+            });
+
+            await Promise.all(sendPromises);
+            console.log(`[notifications] Sent ${successCount} push notifications for article ${article.id}`);
+          }
+        }
+      } catch (notifError: any) {
+        // Don't fail article creation if notifications fail
+        console.error('[notifications] Failed to send push notifications:', notifError);
+      }
+      
       res.json(article);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -1003,6 +1057,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to send newsletter", 
         details: error.message || "Unknown error"
       });
+    }
+  });
+
+  // Push Notification Routes
+  // Subscribe to push notifications
+  app.post("/api/notifications/subscribe", async (req, res) => {
+    try {
+      const subscription = req.body;
+      
+      if (!subscription || !subscription.endpoint) {
+        return res.status(400).json({ error: "Invalid subscription data" });
+      }
+
+      // Store subscription in database (you'll need to add this to storage)
+      await storage.savePushSubscription(subscription);
+      
+      console.log("[notifications] New push subscription saved:", subscription.endpoint);
+      res.json({ message: "Subscription saved successfully" });
+    } catch (error: any) {
+      console.error("[notifications] Subscribe error:", error);
+      res.status(500).json({ error: "Failed to save subscription" });
+    }
+  });
+
+  // Unsubscribe from push notifications
+  app.post("/api/notifications/unsubscribe", async (req, res) => {
+    try {
+      const { endpoint } = req.body;
+      
+      if (!endpoint) {
+        return res.status(400).json({ error: "Missing endpoint" });
+      }
+
+      await storage.removePushSubscription(endpoint);
+      
+      console.log("[notifications] Push subscription removed:", endpoint);
+      res.json({ message: "Unsubscribed successfully" });
+    } catch (error: any) {
+      console.error("[notifications] Unsubscribe error:", error);
+      res.status(500).json({ error: "Failed to unsubscribe" });
+    }
+  });
+
+  // Send push notification (admin only) - triggered when new article is created
+  app.post("/api/notifications/send", requireAdmin, async (req, res) => {
+    try {
+      const { title, body, url, image, articleId } = req.body;
+      
+      if (!title || !body) {
+        return res.status(400).json({ error: "Title and body are required" });
+      }
+
+      const subscriptions = await storage.getAllPushSubscriptions();
+      
+      if (subscriptions.length === 0) {
+        return res.json({ message: "No subscribers", sent: 0 });
+      }
+
+      const webpush = await import('web-push');
+      
+      // Set VAPID details (you'll need to generate these keys)
+      const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+      const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+      
+      if (!vapidPublicKey || !vapidPrivateKey) {
+        console.error("[notifications] VAPID keys not configured");
+        return res.status(500).json({ error: "Push notifications not configured" });
+      }
+
+      webpush.default.setVapidDetails(
+        'mailto:admin@pkmedia.co.ke',
+        vapidPublicKey,
+        vapidPrivateKey
+      );
+
+      const payload = JSON.stringify({
+        title,
+        body,
+        url,
+        image,
+        articleId,
+        icon: '/logo.png',
+        badge: '/logo.png'
+      });
+
+      let successCount = 0;
+      let failCount = 0;
+
+      // Send to all subscriptions
+      const sendPromises = subscriptions.map(async (sub: any) => {
+        try {
+          await webpush.default.sendNotification(sub.subscription, payload);
+          successCount++;
+        } catch (error: any) {
+          failCount++;
+          // If subscription is no longer valid, remove it
+          if (error.statusCode === 410) {
+            await storage.removePushSubscription(sub.subscription.endpoint);
+          }
+          console.error(`[notifications] Failed to send to ${sub.subscription.endpoint}:`, error.message);
+        }
+      });
+
+      await Promise.all(sendPromises);
+
+      console.log(`[notifications] Sent ${successCount} notifications, ${failCount} failed`);
+      res.json({ 
+        message: "Notifications sent", 
+        sent: successCount, 
+        failed: failCount 
+      });
+    } catch (error: any) {
+      console.error("[notifications] Send error:", error);
+      res.status(500).json({ error: "Failed to send notifications" });
     }
   });
 

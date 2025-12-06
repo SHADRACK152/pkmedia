@@ -288,3 +288,20 @@ export const newsletterDripTracking = pgTable("newsletter_drip_tracking", {
 });
 
 export type NewsletterDripTracking = typeof newsletterDripTracking.$inferSelect;
+
+// Push Notifications Subscriptions table
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  userId: varchar("user_id"), // Optional - if logged in user subscribes
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;

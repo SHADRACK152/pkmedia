@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { Category, Article } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
+import NotificationSubscribe from "@/components/ui/notification-subscribe";
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
@@ -154,6 +155,7 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          <NotificationSubscribe />
           <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)}>
             <Search className="h-5 w-5" />
           </Button>
