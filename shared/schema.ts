@@ -158,6 +158,10 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   email: text("email").notNull().unique(),
   name: text("name"),
   status: text("status").notNull().default('active'), // active, unsubscribed
+  preferences: text("preferences").default('[]'), // JSON array of preferred categories
+  verificationToken: text("verification_token"),
+  verifiedAt: timestamp("verified_at"),
+  metadata: text("metadata").default('{}'), // JSON for additional data
   subscribedAt: timestamp("subscribed_at").defaultNow().notNull(),
   unsubscribedAt: timestamp("unsubscribed_at"),
 });
@@ -168,3 +172,123 @@ export const insertNewsletterSubscriberSchema = createInsertSchema(newsletterSub
 });
 export type InsertNewsletterSubscriber = z.infer<typeof insertNewsletterSubscriberSchema>;
 export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
+
+// Newsletter Templates table
+export const newsletterTemplates = pgTable("newsletter_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // daily_digest, weekly_roundup, breaking_news, custom
+  subjectTemplate: text("subject_template").notNull(),
+  headerColor: text("header_color").default('#1e293b'),
+  accentColor: text("accent_color").default('#ef4444'),
+  layout: text("layout").notNull(), // compact, featured, grid
+  includeImages: boolean("include_images").default(true),
+  customIntro: text("custom_intro"),
+  customFooter: text("custom_footer"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type NewsletterTemplate = typeof newsletterTemplates.$inferSelect;
+
+// Newsletter Schedules table
+export const newsletterSchedules = pgTable("newsletter_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  frequency: text("frequency").notNull(), // daily, weekly, monthly
+  sendTime: text("send_time").notNull(), // HH:MM format
+  dayOfWeek: integer("day_of_week"), // 0-6 for weekly
+  dayOfMonth: integer("day_of_month"), // 1-31 for monthly
+  templateId: varchar("template_id").references(() => newsletterTemplates.id),
+  articleCount: integer("article_count").default(5),
+  segment: text("segment"), // JSON array of category preferences
+  lastSentAt: timestamp("last_sent_at"),
+  nextSendAt: timestamp("next_send_at"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type NewsletterSchedule = typeof newsletterSchedules.$inferSelect;
+
+// Newsletter Sends table (tracking)
+export const newsletterSends = pgTable("newsletter_sends", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").references(() => newsletterTemplates.id),
+  scheduleId: varchar("schedule_id").references(() => newsletterSchedules.id),
+  subject: text("subject").notNull(),
+  articleIds: text("article_ids").notNull(), // JSON array
+  recipientCount: integer("recipient_count").notNull(),
+  successCount: integer("success_count").default(0),
+  failedCount: integer("failed_count").default(0),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+  sentBy: varchar("sent_by"),
+});
+
+export type NewsletterSend = typeof newsletterSends.$inferSelect;
+
+// Newsletter Events table (opens, clicks, etc.)
+export const newsletterEvents = pgTable("newsletter_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sendId: varchar("send_id").notNull().references(() => newsletterSends.id, { onDelete: "cascade" }),
+  subscriberEmail: text("subscriber_email").notNull(),
+  eventType: text("event_type").notNull(), // sent, delivered, opened, clicked, bounced, unsubscribed
+  articleId: varchar("article_id"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type NewsletterEvent = typeof newsletterEvents.$inferSelect;
+
+// Newsletter Archives table
+export const newsletterArchives = pgTable("newsletter_archives", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sendId: varchar("send_id").notNull().unique().references(() => newsletterSends.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  htmlContent: text("html_content").notNull(),
+  publishedAt: timestamp("published_at").defaultNow().notNull(),
+  views: integer("views").default(0),
+});
+
+export type NewsletterArchive = typeof newsletterArchives.$inferSelect;
+
+// Drip Campaign tables
+export const newsletterDripCampaigns = pgTable("newsletter_drip_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  triggerEvent: text("trigger_event").notNull(), // subscribe, first_article_view, custom
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type NewsletterDripCampaign = typeof newsletterDripCampaigns.$inferSelect;
+
+export const newsletterDripEmails = pgTable("newsletter_drip_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => newsletterDripCampaigns.id, { onDelete: "cascade" }),
+  sequenceNumber: integer("sequence_number").notNull(),
+  subject: text("subject").notNull(),
+  htmlContent: text("html_content").notNull(),
+  delayDays: integer("delay_days").notNull(),
+  delayHours: integer("delay_hours").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type NewsletterDripEmail = typeof newsletterDripEmails.$inferSelect;
+
+export const newsletterDripTracking = pgTable("newsletter_drip_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").notNull().references(() => newsletterDripCampaigns.id, { onDelete: "cascade" }),
+  subscriberEmail: text("subscriber_email").notNull(),
+  emailId: varchar("email_id").notNull().references(() => newsletterDripEmails.id, { onDelete: "cascade" }),
+  status: text("status").notNull(), // scheduled, sent, failed
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  sentAt: timestamp("sent_at"),
+});
+
+export type NewsletterDripTracking = typeof newsletterDripTracking.$inferSelect;
