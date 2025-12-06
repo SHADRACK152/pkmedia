@@ -1,12 +1,5 @@
 -- Newsletter Advanced Features Migration (PostgreSQL)
 
--- Add preferences and verification to subscribers
-ALTER TABLE newsletter_subscribers 
-ADD COLUMN IF NOT EXISTS preferences TEXT DEFAULT '[]',
-ADD COLUMN IF NOT EXISTS verification_token TEXT,
-ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP,
-ADD COLUMN IF NOT EXISTS metadata TEXT DEFAULT '{}';
-
 -- Create newsletter schedules table
 CREATE TABLE IF NOT EXISTS newsletter_schedules (
   id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),

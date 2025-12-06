@@ -158,10 +158,6 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   email: text("email").notNull().unique(),
   name: text("name"),
   status: text("status").notNull().default('active'), // active, unsubscribed
-  preferences: text("preferences").default('[]'), // JSON array of preferred categories
-  verificationToken: text("verification_token"),
-  verifiedAt: timestamp("verified_at"),
-  metadata: text("metadata").default('{}'), // JSON for additional data
   subscribedAt: timestamp("subscribed_at").defaultNow().notNull(),
   unsubscribedAt: timestamp("unsubscribed_at"),
 });
