@@ -879,6 +879,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test newsletter configuration (admin only)
+  app.get("/api/newsletter/test", requireAdmin, async (req, res) => {
+    try {
+      const hasApiKey = !!process.env.RESEND_API_KEY;
+      const hasEmailFrom = !!process.env.EMAIL_FROM;
+      const hasAppUrl = !!process.env.APP_URL;
+      
+      const subscribers = await storage.getActiveSubscribers();
+      const articles = await storage.getAllArticles();
+      
+      res.json({
+        config: {
+          hasApiKey,
+          hasEmailFrom,
+          hasAppUrl,
+          emailFrom: process.env.EMAIL_FROM || 'not set',
+          appUrl: process.env.APP_URL || 'not set',
+        },
+        data: {
+          subscriberCount: subscribers.length,
+          articleCount: articles.length,
+        },
+        status: hasApiKey && hasEmailFrom && subscribers.length > 0 && articles.length > 0 
+          ? 'ready' 
+          : 'not ready'
+      });
+    } catch (error: any) {
+      console.error("[newsletter] Test error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Send newsletter to all subscribers (admin only)
   app.post("/api/newsletter/send", requireAdmin, async (req, res) => {
     try {

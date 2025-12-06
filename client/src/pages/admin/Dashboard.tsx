@@ -1311,12 +1311,15 @@ export default function AdminDashboard() {
                       });
                       toast({ 
                         title: "Newsletter sent!",
-                        description: `Sent to ${response.success} subscribers`
+                        description: `Sent to ${response.success} subscribers. ${response.failed > 0 ? `${response.failed} failed.` : ''}`
                       });
-                    } catch (error) {
+                      queryClient.invalidateQueries({ queryKey: ['/api/newsletter/subscribers'] });
+                    } catch (error: any) {
+                      console.error('Newsletter send error:', error);
+                      const errorMessage = error?.message || error?.error || error?.details || "Failed to send newsletter";
                       toast({ 
                         title: "Error", 
-                        description: "Failed to send newsletter",
+                        description: errorMessage,
                         variant: "destructive" 
                       });
                     }
