@@ -883,10 +883,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/newsletter/send", requireAdmin, async (req, res) => {
     try {
       if (!process.env.RESEND_API_KEY) {
-        return res.status(500).json({ error: "Email service not configured" });
+        console.error("[newsletter] RESEND_API_KEY not configured");
+        return res.status(500).json({ error: "Email service not configured - missing API key" });
       }
 
+      console.log("[newsletter] Starting newsletter send process...");
+
       const subscribers = await storage.getActiveSubscribers();
+      console.log(`[newsletter] Found ${subscribers.length} active subscribers`);
       
       if (subscribers.length === 0) {
         return res.status(400).json({ error: "No active subscribers" });
@@ -894,6 +898,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get latest 5 articles for the newsletter
       const articles = await storage.getAllArticles();
+      console.log(`[newsletter] Found ${articles.length} total articles`);
+      
+      if (articles.length === 0) {
+        return res.status(400).json({ error: "No articles available to send" });
+      }
+
       const latestArticles = articles.slice(0, 5).map((article: any) => ({
         title: article.title,
         excerpt: article.excerpt || article.content.substring(0, 150) + '...',
@@ -902,13 +912,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category: article.category || 'News',
       }));
 
+      console.log(`[newsletter] Sending to ${subscribers.length} subscribers with ${latestArticles.length} articles`);
+
       // Send emails (in background, don't wait)
       const sendPromises = subscribers.map(sub => 
         sendNewsletterEmail({
           to: sub.email,
           articles: latestArticles,
         }).catch(err => {
-          console.error(`Failed to send to ${sub.email}:`, err);
+          console.error(`[newsletter] Failed to send to ${sub.email}:`, err.message || err);
           return null;
         })
       );
@@ -918,6 +930,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const successCount = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
       const failCount = results.filter(r => r.status === 'rejected' || r.value === null).length;
 
+      console.log(`[newsletter] Send complete: ${successCount} succeeded, ${failCount} failed`);
+
       res.json({ 
         message: "Newsletter sent",
         total: subscribers.length,
@@ -925,8 +939,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         failed: failCount
       });
     } catch (error: any) {
-      console.error("[newsletter] Send error:", error);
-      res.status(500).json({ error: "Failed to send newsletter" });
+      console.error("[newsletter] Send error:", error.message || error);
+      res.status(500).json({ 
+        error: "Failed to send newsletter", 
+        details: error.message || "Unknown error"
+      });
     }
   });
 

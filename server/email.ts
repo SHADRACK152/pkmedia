@@ -1,6 +1,16 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+
+function getResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY environment variable is not set');
+  }
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 export interface NewsletterEmailData {
   to: string;
@@ -14,6 +24,7 @@ export interface NewsletterEmailData {
 }
 
 export async function sendNewsletterEmail(data: NewsletterEmailData) {
+  const client = getResendClient();
   const { to, articles } = data;
   
   const topArticles = articles.slice(0, 5);
@@ -99,21 +110,23 @@ export async function sendNewsletterEmail(data: NewsletterEmailData) {
   `;
 
   try {
-    const result = await resend.emails.send({
+    const result = await client.emails.send({
       from: process.env.EMAIL_FROM || 'PKMedia <newsletter@pkmedia.com>',
       to,
       subject: `📰 The Morning Brief - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
       html,
     });
 
+    console.log('Newsletter email sent successfully to:', to);
     return result;
   } catch (error) {
-    console.error('Error sending newsletter email:', error);
+    console.error('Error sending newsletter email to', to, ':', error);
     throw error;
   }
 }
 
 export async function sendWelcomeEmail(to: string) {
+  const client = getResendClient();
   const html = `
 <!DOCTYPE html>
 <html>
@@ -164,16 +177,17 @@ export async function sendWelcomeEmail(to: string) {
   `;
 
   try {
-    const result = await resend.emails.send({
+    const result = await client.emails.send({
       from: process.env.EMAIL_FROM || 'PKMedia <newsletter@pkmedia.com>',
       to,
       subject: '🎉 Welcome to The Morning Brief - PKMedia',
       html,
     });
 
+    console.log('Welcome email sent successfully to:', to);
     return result;
   } catch (error) {
-    console.error('Error sending welcome email:', error);
+    console.error('Error sending welcome email to', to, ':', error);
     throw error;
   }
 }
