@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { generateNewsletterHTML, generateDripEmailHTML, type NewsletterArticle, type TemplateOptions } from './email-templates';
+import { generateNewsletterHTML, generateDripEmailHTML, type NewsletterArticle, type TemplateOptions } from './email-templates.js';
 
 let resend: Resend | null = null;
 
