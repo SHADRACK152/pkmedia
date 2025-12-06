@@ -1293,6 +1293,159 @@ export default function AdminDashboard() {
           {/* NEWSLETTER TAB */}
           {activeTab === 'newsletter' && (
             <div className="space-y-6 animate-in fade-in duration-500">
+              {/* Newsletter Composer Card */}
+              <Card className="border-2 border-primary/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Megaphone className="h-5 w-5" />
+                    Newsletter Composer
+                  </CardTitle>
+                  <CardDescription>
+                    Create and send targeted newsletters to your subscribers
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Newsletter Type */}
+                    <div className="space-y-2">
+                      <Label htmlFor="newsletter-type">Newsletter Type</Label>
+                      <Select 
+                        defaultValue="latest"
+                        onValueChange={(value) => {
+                          const selectEl = document.getElementById('newsletter-type') as any;
+                          if (selectEl) selectEl.dataset.value = value;
+                        }}
+                      >
+                        <SelectTrigger id="newsletter-type">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="latest">Latest Articles (All Categories)</SelectItem>
+                          <SelectItem value="breaking">Breaking News Alert</SelectItem>
+                          <SelectItem value="politics">Politics Newsletter</SelectItem>
+                          <SelectItem value="business">Business Newsletter</SelectItem>
+                          <SelectItem value="sports">Sports Newsletter</SelectItem>
+                          <SelectItem value="entertainment">Entertainment Newsletter</SelectItem>
+                          <SelectItem value="technology">Technology Newsletter</SelectItem>
+                          <SelectItem value="health">Health Newsletter</SelectItem>
+                          <SelectItem value="lifestyle">Lifestyle Newsletter</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Template Style */}
+                    <div className="space-y-2">
+                      <Label htmlFor="template-style">Template Style</Label>
+                      <Select 
+                        defaultValue="featured"
+                        onValueChange={(value) => {
+                          const selectEl = document.getElementById('template-style') as any;
+                          if (selectEl) selectEl.dataset.value = value;
+                        }}
+                      >
+                        <SelectTrigger id="template-style">
+                          <SelectValue placeholder="Select template" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="featured">Featured Story (Large hero image)</SelectItem>
+                          <SelectItem value="grid">Grid Layout (2 columns)</SelectItem>
+                          <SelectItem value="compact">Compact List (Text-focused)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Number of Articles */}
+                  <div className="space-y-2">
+                    <Label htmlFor="article-count">Number of Articles</Label>
+                    <Select defaultValue="5">
+                      <SelectTrigger id="article-count">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3 Articles</SelectItem>
+                        <SelectItem value="5">5 Articles</SelectItem>
+                        <SelectItem value="7">7 Articles</SelectItem>
+                        <SelectItem value="10">10 Articles</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Preview Note */}
+                  <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-800 dark:text-blue-300">
+                      <p className="font-medium">Newsletter will include:</p>
+                      <ul className="list-disc list-inside mt-1 space-y-1">
+                        <li>Articles from selected category/type</li>
+                        <li>Professional email template with your branding</li>
+                        <li>Direct links to full articles</li>
+                        <li>Unsubscribe option for recipients</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Send Button */}
+                  <Button 
+                    onClick={async () => {
+                      const typeEl = document.getElementById('newsletter-type') as any;
+                      const templateEl = document.getElementById('template-style') as any;
+                      const countEl = document.getElementById('article-count') as any;
+                      
+                      const newsletterType = typeEl?.dataset.value || 'latest';
+                      const templateStyle = templateEl?.dataset.value || 'featured';
+                      const articleCount = parseInt(countEl?.textContent?.match(/\d+/)?.[0] || '5');
+                      
+                      const categoryMap: Record<string, string> = {
+                        'latest': '',
+                        'breaking': 'breaking-news',
+                        'politics': 'politics',
+                        'business': 'business',
+                        'sports': 'sports',
+                        'entertainment': 'entertainment',
+                        'technology': 'technology',
+                        'health': 'health',
+                        'lifestyle': 'lifestyle'
+                      };
+                      
+                      const category = categoryMap[newsletterType];
+                      const isBreaking = newsletterType === 'breaking';
+                      
+                      if (!confirm(`Send ${newsletterType === 'latest' ? 'latest articles' : newsletterType} newsletter to all active subscribers?`)) return;
+                      
+                      try {
+                        const response = await apiRequest('POST', '/api/newsletter/send', {
+                          category: category,
+                          template: templateStyle,
+                          count: articleCount,
+                          type: isBreaking ? 'breaking_news' : 'daily_digest'
+                        });
+                        const data = await response.json();
+                        toast({ 
+                          title: "Newsletter sent!",
+                          description: `Sent to ${data.success} subscribers. ${data.failed > 0 ? `${data.failed} failed.` : ''}`
+                        });
+                        queryClient.invalidateQueries({ queryKey: ['/api/newsletter/subscribers'] });
+                      } catch (error: any) {
+                        console.error('Newsletter send error:', error);
+                        const errorMessage = error?.message || "Failed to send newsletter";
+                        toast({ 
+                          title: "Error", 
+                          description: errorMessage,
+                          variant: "destructive" 
+                        });
+                      }
+                    }}
+                    className="w-full bg-primary hover:bg-primary/90"
+                    size="lg"
+                  >
+                    <Megaphone className="mr-2 h-5 w-5" /> 
+                    Send Newsletter to {subscribers.filter((s: any) => s.status === 'active').length} Active Subscribers
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Subscribers List */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <h2 className="text-lg font-bold">Newsletter Subscribers</h2>
@@ -1301,32 +1454,6 @@ export default function AdminDashboard() {
                     {subscribers.filter((s: any) => s.status === 'active').length} Active
                   </Badge>
                 </div>
-                <Button 
-                  onClick={async () => {
-                    if (!confirm('Send newsletter to all active subscribers?')) return;
-                    
-                    try {
-                      const response = await apiRequest('POST', '/api/newsletter/send');
-                      const data = await response.json();
-                      toast({ 
-                        title: "Newsletter sent!",
-                        description: `Sent to ${data.success} subscribers. ${data.failed > 0 ? `${data.failed} failed.` : ''}`
-                      });
-                      queryClient.invalidateQueries({ queryKey: ['/api/newsletter/subscribers'] });
-                    } catch (error: any) {
-                      console.error('Newsletter send error:', error);
-                      const errorMessage = error?.message || "Failed to send newsletter";
-                      toast({ 
-                        title: "Error", 
-                        description: errorMessage,
-                        variant: "destructive" 
-                      });
-                    }
-                  }}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  <Megaphone className="mr-2 h-4 w-4" /> Send Newsletter
-                </Button>
               </div>
 
               <Card>

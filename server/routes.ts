@@ -928,29 +928,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No active subscribers" });
       }
 
-      // Get latest 5 articles for the newsletter
-      const articles = await storage.getAllArticles();
+      // Extract parameters from request body
+      const { category, template, count, type } = req.body;
+      const articleCount = count || 5;
+      const templateStyle = template || 'featured';
+      const newsletterType = type || 'daily_digest';
+
+      // Get articles based on category filter
+      let articles = await storage.getAllArticles();
       console.log(`[newsletter] Found ${articles.length} total articles`);
       
       if (articles.length === 0) {
         return res.status(400).json({ error: "No articles available to send" });
       }
 
-      const latestArticles = articles.slice(0, 5).map((article: any) => ({
+      // Filter by category if specified
+      if (category && category !== '') {
+        articles = articles.filter((article: any) => 
+          article.category?.toLowerCase() === category.toLowerCase()
+        );
+        console.log(`[newsletter] Filtered to ${articles.length} articles in category: ${category}`);
+        
+        if (articles.length === 0) {
+          return res.status(400).json({ 
+            error: `No articles found in category: ${category}` 
+          });
+        }
+      }
+
+      const selectedArticles = articles.slice(0, articleCount).map((article: any) => ({
         title: article.title,
         excerpt: article.excerpt || article.content.substring(0, 150) + '...',
-        url: `${process.env.APP_URL || 'https://pkmedia.vercel.app'}/article/${article.id}`,
+        url: `${process.env.APP_URL || 'https://pkmedia.co.ke'}/article/${article.id}`,
         image: article.image,
         category: article.category || 'News',
       }));
 
-      console.log(`[newsletter] Sending to ${subscribers.length} subscribers with ${latestArticles.length} articles`);
+      console.log(`[newsletter] Sending to ${subscribers.length} subscribers with ${selectedArticles.length} articles`);
+      console.log(`[newsletter] Template: ${templateStyle}, Type: ${newsletterType}`);
 
       // Send emails (in background, don't wait)
       const sendPromises = subscribers.map(sub => 
         sendNewsletterEmail({
           to: sub.email,
-          articles: latestArticles,
+          articles: selectedArticles,
+          template: {
+            layout: templateStyle,
+            type: newsletterType,
+            primaryColor: '#3b82f6',
+            accentColor: '#1e40af'
+          }
         }).catch(err => {
           console.error(`[newsletter] Failed to send to ${sub.email}:`, err.message || err);
           return null;
