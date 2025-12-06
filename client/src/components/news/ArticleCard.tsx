@@ -21,6 +21,14 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
     ? formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })
     : 'Just now';
 
+  // Strip HTML tags from content for preview
+  const getPlainTextPreview = (html: string, maxLength: number = 150) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const text = temp.textContent || temp.innerText || '';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
+
   const isVideo = (url: string) => {
     return url.match(/\.(mp4|webm|mov)$/i) || url.includes('/video/upload/');
   };
@@ -153,7 +161,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
               {article.title}
             </h3>
             <p className="text-slate-600 text-sm line-clamp-2 leading-relaxed mb-4">
-              {article.content}
+              {getPlainTextPreview(article.content)}
             </p>
             <div className="mt-auto pt-3 border-t border-slate-100">
               <span className="text-sm font-bold text-primary flex items-center gap-2 group-hover:gap-3 transition-all uppercase tracking-wide">
