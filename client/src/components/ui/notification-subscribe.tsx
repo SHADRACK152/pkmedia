@@ -46,6 +46,17 @@ export default function NotificationSubscribe() {
     setLoading(true);
     
     try {
+      // Check if we're in a secure context (HTTPS or localhost)
+      if (!window.isSecureContext && import.meta.env.PROD) {
+        toast({
+          title: 'HTTPS Required',
+          description: 'Push notifications require a secure HTTPS connection',
+          variant: 'destructive'
+        });
+        setLoading(false);
+        return;
+      }
+
       // Request notification permission
       const permission = await Notification.requestPermission();
       
@@ -63,14 +74,25 @@ export default function NotificationSubscribe() {
       const registration = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
 
-      // Subscribe to push notifications
-      const subscription = await registration.pushManager.subscribe({
+      // Check if push manager is available
+      if (!registration.pushManager) {
+        throw new Error('Push notifications are not supported in this browser');
+      }
+
+      // Try to subscribe with timeout to catch hanging requests
+      const subscriptionPromise = registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
           import.meta.env.VITE_VAPID_PUBLIC_KEY || 
           'BEl62iUYgUivxIkv69yViEuiBIa-Ib37L8-F4MYM3UYZjY6-hLLlhBvwwqPxCZTJhLFE2P8u7F0hzKZxI8Vh0qE'
         )
       });
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Push service timeout')), 10000)
+      );
+
+      const subscription = await Promise.race([subscriptionPromise, timeoutPromise]) as PushSubscription;
 
       // Send subscription to server
       const response = await fetch('/api/notifications/subscribe', {
@@ -101,10 +123,25 @@ export default function NotificationSubscribe() {
 
     } catch (error: any) {
       console.error('Error subscribing to notifications:', error);
+      
+      // Handle specific error cases
+      let errorTitle = 'Subscription failed';
+      let errorMessage = 'Could not enable notifications';
+      
+      if (error.name === 'AbortError' || error.message?.includes('push service') || error.message?.includes('Registration failed') || error.message?.includes('timeout')) {
+        errorTitle = 'Push Service Unavailable';
+        errorMessage = 'The browser\'s push notification service is currently unavailable. This could be due to:\n\n• Network connectivity issues\n• Browser push service being down\n• Firewall/VPN blocking the connection\n• Browser extensions interfering\n\nPlease try again later or check your network settings.';
+      } else if (error.name === 'NotAllowedError') {
+        errorMessage = 'Notification permission was denied. Please enable notifications in your browser settings and try again.';
+      } else if (error.message?.includes('not supported')) {
+        errorMessage = 'Push notifications are not supported in your browser. Try using Chrome, Firefox, or Edge.';
+      }
+      
       toast({
-        title: 'Subscription failed',
-        description: error.message || 'Could not enable notifications',
-        variant: 'destructive'
+        title: errorTitle,
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 8000
       });
     } finally {
       setLoading(false);

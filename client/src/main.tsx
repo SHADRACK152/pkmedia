@@ -10,7 +10,12 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
         console.log('Service Worker registered:', registration);
       })
       .catch((error) => {
-        console.error('Service Worker registration failed:', error);
+        // Silently handle service worker errors in development
+        if (import.meta.env.DEV) {
+          console.warn('Service Worker registration failed (expected in dev):', error.message);
+        } else {
+          console.error('Service Worker registration failed:', error);
+        }
       });
   });
 }

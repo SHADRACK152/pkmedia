@@ -24,7 +24,10 @@ export default function AdBanner({ className, format = "auto", label = "Sponsore
     ? relevantAds[Math.floor(Math.random() * relevantAds.length)] 
     : null;
     
-  console.log(`AdBanner[${location || 'all'}]: Found ${relevantAds.length} ads`);
+  // Only log if there's an issue (no ads found when location is specified)
+  if (location && relevantAds.length === 0) {
+    console.warn(`AdBanner[${location}]: No ads found for this location`);
+  }
 
   const isVideo = (url: string) => {
     return url.match(/\.(mp4|webm|mov)$/i) || url.includes('/video/upload/');
