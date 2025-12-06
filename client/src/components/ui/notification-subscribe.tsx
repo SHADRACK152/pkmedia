@@ -23,7 +23,8 @@ export default function NotificationSubscribe() {
       const subscription = await registration.pushManager.getSubscription();
       setIsSubscribed(!!subscription);
     } catch (error) {
-      console.error('Error checking subscription:', error);
+      // Silently fail - user hasn't actively tried to subscribe yet
+      console.debug('Push subscription check failed (this is normal if push service is unavailable)');
     }
   };
 
@@ -122,7 +123,8 @@ export default function NotificationSubscribe() {
       });
 
     } catch (error: any) {
-      console.error('Error subscribing to notifications:', error);
+      // Only log to console if user actively tried to subscribe (not on page load)
+      console.warn('Push notification subscription failed:', error.name || error.message);
       
       // Handle specific error cases
       let errorTitle = 'Subscription failed';
@@ -131,6 +133,13 @@ export default function NotificationSubscribe() {
       if (error.name === 'AbortError' || error.message?.includes('push service') || error.message?.includes('Registration failed') || error.message?.includes('timeout')) {
         errorTitle = 'Push Service Unavailable';
         errorMessage = 'The browser\'s push notification service is currently unavailable. This could be due to:\n\n• Network connectivity issues\n• Browser push service being down\n• Firewall/VPN blocking the connection\n• Browser extensions interfering\n\nPlease try again later or check your network settings.';
+        
+        // Don't show toast for AbortError in production - it's too common
+        if (import.meta.env.PROD) {
+          console.warn('Push service unavailable - silently failing');
+          setLoading(false);
+          return;
+        }
       } else if (error.name === 'NotAllowedError') {
         errorMessage = 'Notification permission was denied. Please enable notifications in your browser settings and try again.';
       } else if (error.message?.includes('not supported')) {
