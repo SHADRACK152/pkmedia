@@ -1306,17 +1306,16 @@ export default function AdminDashboard() {
                     if (!confirm('Send newsletter to all active subscribers?')) return;
                     
                     try {
-                      const response = await apiRequest('/api/newsletter/send', {
-                        method: 'POST',
-                      });
+                      const response = await apiRequest('POST', '/api/newsletter/send');
+                      const data = await response.json();
                       toast({ 
                         title: "Newsletter sent!",
-                        description: `Sent to ${response.success} subscribers. ${response.failed > 0 ? `${response.failed} failed.` : ''}`
+                        description: `Sent to ${data.success} subscribers. ${data.failed > 0 ? `${data.failed} failed.` : ''}`
                       });
                       queryClient.invalidateQueries({ queryKey: ['/api/newsletter/subscribers'] });
                     } catch (error: any) {
                       console.error('Newsletter send error:', error);
-                      const errorMessage = error?.message || error?.error || error?.details || "Failed to send newsletter";
+                      const errorMessage = error?.message || "Failed to send newsletter";
                       toast({ 
                         title: "Error", 
                         description: errorMessage,
