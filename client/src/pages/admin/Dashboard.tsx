@@ -1414,12 +1414,32 @@ export default function AdminDashboard() {
                       if (!confirm(`Send ${newsletterType === 'latest' ? 'latest articles' : newsletterType} newsletter to all active subscribers?`)) return;
                       
                       try {
-                        const response = await apiRequest('POST', '/api/newsletter/send', {
-                          category: category,
-                          template: templateStyle,
-                          count: articleCount,
-                          type: isBreaking ? 'breaking_news' : 'daily_digest'
+                        const response = await fetch('/api/newsletter/send', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          credentials: 'include',
+                          body: JSON.stringify({
+                            category: category,
+                            template: templateStyle,
+                            count: articleCount,
+                            type: isBreaking ? 'breaking_news' : 'daily_digest'
+                          })
                         });
+                        
+                        if (!response.ok) {
+                          const errorData = await response.text();
+                          let errorMsg = 'Failed to send newsletter';
+                          try {
+                            const parsed = JSON.parse(errorData);
+                            errorMsg = parsed.error || parsed.message || errorMsg;
+                          } catch {
+                            errorMsg = errorData || errorMsg;
+                          }
+                          throw new Error(errorMsg);
+                        }
+                        
                         const data = await response.json();
                         toast({ 
                           title: "Newsletter sent!",
@@ -1430,7 +1450,7 @@ export default function AdminDashboard() {
                         console.error('Newsletter send error:', error);
                         const errorMessage = error?.message || "Failed to send newsletter";
                         toast({ 
-                          title: "Error", 
+                          title: "Error sending newsletter", 
                           description: errorMessage,
                           variant: "destructive" 
                         });
