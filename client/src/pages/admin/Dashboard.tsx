@@ -30,7 +30,10 @@ import {
   TrendingUp,
   Clock,
   Megaphone,
-  Mail
+  Mail,
+  Newspaper,
+  Pin,
+  PinOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +84,16 @@ export default function AdminDashboard() {
   const [tagInput, setTagInput] = useState('');
   const [newTagName, setNewTagName] = useState('');
   const [additionalImageUrl, setAdditionalImageUrl] = useState('');
+  const [isShortNewsSheetOpen, setIsShortNewsSheetOpen] = useState(false);
+  const [editingShortNews, setEditingShortNews] = useState<any>(null);
+  const [shortNewsForm, setShortNewsForm] = useState({
+    content: '',
+    image: '',
+    category: '',
+    author: '',
+    linkUrl: '',
+    isPinned: false
+  });
 
   // Real Data Queries
   const { data: articles = [] } = useQuery<any[]>({
@@ -118,6 +131,10 @@ export default function AdminDashboard() {
   const { data: systemStatus } = useQuery<any>({
     queryKey: ['/api/system/status'],
     refetchInterval: 30000, // Refresh every 30s
+  });
+
+  const { data: shortNews = [] } = useQuery<any[]>({
+    queryKey: ['/api/short-news'],
   });
 
   const recentPostsCount = articles.filter((a: any) => {
@@ -373,6 +390,54 @@ export default function AdminDashboard() {
     }
   });
 
+  // Short News Mutations
+  const createShortNewsMutation = useMutation({
+    mutationFn: async (newShortNews: any) => {
+      const res = await apiRequest("POST", "/api/short-news", newShortNews);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/short-news'] });
+      toast({ title: "Short News Created", description: "Quick update posted successfully." });
+      setIsShortNewsSheetOpen(false);
+      setEditingShortNews(null);
+      setShortNewsForm({ content: '', image: '', category: '', author: '', linkUrl: '', isPinned: false });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const updateShortNewsMutation = useMutation({
+    mutationFn: async (news: any) => {
+      const res = await apiRequest("PUT", `/api/short-news/${news.id}`, news);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/short-news'] });
+      toast({ title: "Short News Updated", description: "Changes saved successfully." });
+      setIsShortNewsSheetOpen(false);
+      setEditingShortNews(null);
+      setShortNewsForm({ content: '', image: '', category: '', author: '', linkUrl: '', isPinned: false });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const deleteShortNewsMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/short-news/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/short-news'] });
+      toast({ title: "Short News Deleted", description: "Update removed successfully.", variant: "destructive" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -450,6 +515,40 @@ export default function AdminDashboard() {
       setIsSaving(false);
       toast({ title: "Settings Saved", description: "All changes have been successfully applied." });
     }, 1000);
+  };
+
+  const openShortNewsEditor = (news?: any) => {
+    setEditingShortNews(news || null);
+    setShortNewsForm({
+      content: news?.content || '',
+      image: news?.image || '',
+      category: news?.category || '',
+      author: news?.author || '',
+      linkUrl: news?.linkUrl || '',
+      isPinned: news?.isPinned || false
+    });
+    setIsShortNewsSheetOpen(true);
+  };
+
+  const handleSaveShortNews = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const data = {
+      ...shortNewsForm,
+      status: 'published'
+    };
+
+    if (editingShortNews) {
+      updateShortNewsMutation.mutate({ ...data, id: editingShortNews.id });
+    } else {
+      createShortNewsMutation.mutate(data);
+    }
+  };
+
+  const handleDeleteShortNews = (id: string) => {
+    if (confirm("Are you sure you want to delete this update?")) {
+      deleteShortNewsMutation.mutate(id);
+    }
   };
 
   const handleSaveAd = async (e: React.FormEvent) => {
@@ -535,6 +634,13 @@ export default function AdminDashboard() {
           onClick={() => setActiveTab('articles')}
         >
           <FileText className="mr-2 h-4 w-4" /> Articles
+        </Button>
+        <Button 
+          variant="ghost" 
+          className={`w-full justify-start ${activeTab === 'short-news' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
+          onClick={() => setActiveTab('short-news')}
+        >
+          <Newspaper className="mr-2 h-4 w-4" /> Short News
         </Button>
         <Button 
           variant="ghost" 
@@ -893,6 +999,77 @@ export default function AdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+          
+          {/* SHORT NEWS TAB */}
+          {activeTab === 'short-news' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Short News</h2>
+                  <p className="text-sm text-muted-foreground">Quick updates and breaking news briefs</p>
+                </div>
+                <Button className="bg-primary hover:bg-primary/90" onClick={() => openShortNewsEditor()}>
+                  <Plus className="mr-2 h-4 w-4" /> Add Update
+                </Button>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Content</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Author</TableHead>
+                      <TableHead>Views</TableHead>
+                      <TableHead>Likes</TableHead>
+                      <TableHead>Pinned</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {shortNews.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          No short news updates yet. Create your first one!
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      shortNews.map((news: any) => (
+                        <TableRow key={news.id}>
+                          <TableCell className="max-w-md">
+                            <p className="line-clamp-2">{news.content}</p>
+                          </TableCell>
+                          <TableCell><Badge variant="outline">{news.category}</Badge></TableCell>
+                          <TableCell>{news.author}</TableCell>
+                          <TableCell>{news.views || 0}</TableCell>
+                          <TableCell>{news.likes || 0}</TableCell>
+                          <TableCell>
+                            {news.isPinned ? (
+                              <Pin className="h-4 w-4 text-primary" />
+                            ) : (
+                              <PinOff className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(news.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => openShortNewsEditor(news)}>
+                              <Pencil className="h-4 w-4 text-blue-600" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteShortNews(news.id)}>
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -2149,6 +2326,111 @@ export default function AdminDashboard() {
                 <Button type="button" variant="outline" onClick={() => setIsAdSheetOpen(false)}>
                     Cancel
                 </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
+
+      {/* Short News Editor Sheet */}
+      <Sheet open={isShortNewsSheetOpen} onOpenChange={setIsShortNewsSheetOpen}>
+        <SheetContent side="right" className="w-[100%] sm:w-[600px] overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle>{editingShortNews ? "Edit Short News" : "Create Quick Update"}</SheetTitle>
+            <SheetDescription>
+              {editingShortNews ? "Update quick news brief below." : "Post a short news update or breaking brief."}
+            </SheetDescription>
+          </SheetHeader>
+          <form onSubmit={handleSaveShortNews} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="short-news-content">Content</Label>
+              <Textarea 
+                id="short-news-content" 
+                name="content" 
+                value={shortNewsForm.content}
+                onChange={(e) => setShortNewsForm({ ...shortNewsForm, content: e.target.value })}
+                placeholder="Quick update or breaking news (recommended max 280 chars)" 
+                rows={4}
+                maxLength={500}
+                required 
+              />
+              <p className="text-xs text-muted-foreground">
+                {shortNewsForm.content.length} / 500 characters
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="short-news-category">Category</Label>
+              <Select 
+                value={shortNewsForm.category} 
+                onValueChange={(value) => setShortNewsForm({ ...shortNewsForm, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat: any) => (
+                    <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="short-news-author">Author</Label>
+              <Input 
+                id="short-news-author" 
+                name="author" 
+                value={shortNewsForm.author}
+                onChange={(e) => setShortNewsForm({ ...shortNewsForm, author: e.target.value })}
+                placeholder="Author name" 
+                required 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="short-news-image">Image URL (Optional)</Label>
+              <Input 
+                id="short-news-image" 
+                name="image" 
+                value={shortNewsForm.image}
+                onChange={(e) => setShortNewsForm({ ...shortNewsForm, image: e.target.value })}
+                placeholder="https://..." 
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="short-news-link">External Link (Optional)</Label>
+              <Input 
+                id="short-news-link" 
+                name="linkUrl" 
+                value={shortNewsForm.linkUrl}
+                onChange={(e) => setShortNewsForm({ ...shortNewsForm, linkUrl: e.target.value })}
+                placeholder="https://..." 
+              />
+              <p className="text-xs text-muted-foreground">
+                Link to full article or external source
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 p-4 bg-slate-50 rounded-lg border">
+              <Switch 
+                id="short-news-pinned" 
+                checked={shortNewsForm.isPinned}
+                onCheckedChange={(checked) => setShortNewsForm({ ...shortNewsForm, isPinned: checked })}
+              />
+              <div>
+                <Label htmlFor="short-news-pinned" className="cursor-pointer">Pin to Top</Label>
+                <p className="text-xs text-muted-foreground">Pinned updates appear first</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-4 border-t">
+              <Button type="submit" className="flex-1">
+                {editingShortNews ? "Update" : "Publish"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setIsShortNewsSheetOpen(false)}>
+                Cancel
+              </Button>
             </div>
           </form>
         </SheetContent>

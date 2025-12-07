@@ -77,6 +77,28 @@ export const insertArticleSchema = createInsertSchema(articles).omit({
 export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articles.$inferSelect;
 
+// Short News table - for quick updates/briefs
+export const shortNews = pgTable("short_news", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  content: text("content").notNull(), // Main text (max 280 chars recommended)
+  image: text("image"), // Optional image
+  category: text("category").notNull(),
+  author: text("author").notNull(),
+  linkUrl: text("link_url"), // Optional external link
+  status: text("status").notNull().default('published'),
+  views: integer("views").default(0).notNull(),
+  likes: integer("likes").default(0).notNull(),
+  isPinned: boolean("is_pinned").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertShortNewsSchema = createInsertSchema(shortNews).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertShortNews = z.infer<typeof insertShortNewsSchema>;
+export type ShortNews = typeof shortNews.$inferSelect;
+
 // Comments table
 export const comments = pgTable("comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -158,6 +180,10 @@ export const newsletterSubscribers = pgTable("newsletter_subscribers", {
   email: text("email").notNull().unique(),
   name: text("name"),
   status: text("status").notNull().default('active'), // active, unsubscribed
+  preferences: text("preferences"), // JSON string for category preferences
+  verificationToken: text("verification_token"), // For email verification
+  verifiedAt: timestamp("verified_at"), // When email was verified
+  metadata: text("metadata"), // JSON string for additional data
   subscribedAt: timestamp("subscribed_at").defaultNow().notNull(),
   unsubscribedAt: timestamp("unsubscribed_at"),
 });

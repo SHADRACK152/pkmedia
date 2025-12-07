@@ -4,6 +4,7 @@ import AdBanner from "@/components/layout/AdBanner";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BreakingNewsTicker from "@/components/layout/Ticker";
+import ShortNewsFeed from "@/components/news/ShortNewsFeed";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ChevronRight, TrendingUp, FileText } from "lucide-react";
 import { Link } from "wouter";
@@ -200,6 +201,9 @@ export default function Home() {
 
           {/* Sidebar Column */}
           <aside className="lg:col-span-4 space-y-8">
+            
+            {/* Short News Feed */}
+            <ShortNewsFeed />
             
             {/* Latest News Widget */}
             <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden sticky top-24 hover:shadow-xl transition-shadow">

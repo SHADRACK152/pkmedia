@@ -450,6 +450,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== SHORT NEWS ROUTES ====================
+  
+  app.get("/api/short-news", async (req, res) => {
+    try {
+      const news = await storage.getAllShortNews();
+      res.json(news);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/short-news/:id", async (req, res) => {
+    try {
+      const news = await storage.getShortNewsById(req.params.id);
+      if (!news) {
+        return res.status(404).json({ error: "Short news not found" });
+      }
+      res.json(news);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/short-news", requireAuth, async (req, res) => {
+    try {
+      const news = await storage.createShortNews(req.body);
+      res.json(news);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/short-news/:id", requireAuth, async (req, res) => {
+    try {
+      const news = await storage.updateShortNews(req.params.id, req.body);
+      if (!news) {
+        return res.status(404).json({ error: "Short news not found" });
+      }
+      res.json(news);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/short-news/:id", requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteShortNews(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Short news not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/short-news/:id/view", async (req, res) => {
+    try {
+      await storage.incrementShortNewsViews(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/short-news/:id/like", async (req, res) => {
+    try {
+      await storage.incrementShortNewsLikes(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Category routes
   app.get("/api/categories", async (req, res) => {
     try {

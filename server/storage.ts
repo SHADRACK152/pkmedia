@@ -1,6 +1,6 @@
 import { db } from "./db.js";
-import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks, newsletterSubscribers, pushSubscriptions } from "../shared/schema.js";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink, NewsletterSubscriber, InsertNewsletterSubscriber, PushSubscription, InsertPushSubscription } from "../shared/schema.js";
+import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks, newsletterSubscribers, pushSubscriptions, shortNews } from "../shared/schema.js";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink, NewsletterSubscriber, InsertNewsletterSubscriber, PushSubscription, InsertPushSubscription, ShortNews, InsertShortNews } from "../shared/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -73,6 +73,15 @@ export interface IStorage {
   savePushSubscription(subscription: any): Promise<PushSubscription>;
   getAllPushSubscriptions(): Promise<PushSubscription[]>;
   removePushSubscription(endpoint: string): Promise<boolean>;
+  
+  // Short News operations
+  getAllShortNews(): Promise<ShortNews[]>;
+  getShortNewsById(id: string): Promise<ShortNews | undefined>;
+  createShortNews(news: InsertShortNews): Promise<ShortNews>;
+  updateShortNews(id: string, news: Partial<InsertShortNews>): Promise<ShortNews | undefined>;
+  deleteShortNews(id: string): Promise<boolean>;
+  incrementShortNewsViews(id: string): Promise<void>;
+  incrementShortNewsLikes(id: string): Promise<void>;
 }
 
 export class Storage implements IStorage {
@@ -438,6 +447,47 @@ export class Storage implements IStorage {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return code;
+  }
+
+  // Short News operations
+  async getAllShortNews(): Promise<ShortNews[]> {
+    return await db.select().from(shortNews)
+      .orderBy(desc(shortNews.isPinned), desc(shortNews.createdAt));
+  }
+
+  async getShortNewsById(id: string): Promise<ShortNews | undefined> {
+    const [news] = await db.select().from(shortNews).where(eq(shortNews.id, id)).limit(1);
+    return news;
+  }
+
+  async createShortNews(news: InsertShortNews): Promise<ShortNews> {
+    const [created] = await db.insert(shortNews).values(news).returning();
+    return created;
+  }
+
+  async updateShortNews(id: string, news: Partial<InsertShortNews>): Promise<ShortNews | undefined> {
+    const [updated] = await db.update(shortNews)
+      .set(news)
+      .where(eq(shortNews.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteShortNews(id: string): Promise<boolean> {
+    const result = await db.delete(shortNews).where(eq(shortNews.id, id));
+    return result.count > 0;
+  }
+
+  async incrementShortNewsViews(id: string): Promise<void> {
+    await db.update(shortNews)
+      .set({ views: sql`${shortNews.views} + 1` })
+      .where(eq(shortNews.id, id));
+  }
+
+  async incrementShortNewsLikes(id: string): Promise<void> {
+    await db.update(shortNews)
+      .set({ likes: sql`${shortNews.likes} + 1` })
+      .where(eq(shortNews.id, id));
   }
 }
 
