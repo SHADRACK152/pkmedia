@@ -2174,7 +2174,7 @@ export default function AdminDashboard() {
                       )}
                     </div>
                     
-                    <div className="flex justify-between mt-6">
+                    <div className="flex justify-between mt-6 pt-4 border-t">
                       <Button 
                         type="button" 
                         variant="outline"
