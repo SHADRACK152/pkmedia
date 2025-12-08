@@ -13,6 +13,7 @@ import About from "@/pages/About";
 import Contact from "@/pages/Contact";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
+import Funders from "@/pages/Funders";
 import AdminLogin from "@/pages/admin/Login";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import Settings from "@/pages/Settings";
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/article/:slug" component={ArticlePage} />
       <Route path="/s/:code" component={ArticlePage} /> {/* Short link route handled server-side, but keep for client routing */}
       <Route path="/about" component={About} />
+      <Route path="/funders" component={Funders} />
       <Route path="/contact" component={Contact} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
