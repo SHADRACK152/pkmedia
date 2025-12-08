@@ -6,11 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, Send, ThumbsUp, ThumbsDown, Share2, LogIn } from "lucide-react";
+import { MessageSquare, Send, ThumbsUp, ThumbsDown, Share2, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import SubscribeForm from "@/components/newsletter/SubscribeForm";
 
 interface CommentSectionProps {
   articleId: string;
@@ -20,23 +21,23 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
   const { toast } = useToast();
   const [userName, setUserName] = useState("");
   const [content, setContent] = useState("");
-  const [user, setUser] = useState<any>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [subscriber, setSubscriber] = useState<any>(null);
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
 
-  // Check user authentication
+  // Check newsletter subscription
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch('/api/auth/me', { credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
+    const checkSubscription = () => {
+      const subscriberData = localStorage.getItem('newsletter_subscriber');
+      if (subscriberData) {
+        try {
+          const data = JSON.parse(subscriberData);
+          setSubscriber(data);
+        } catch (err) {
+          localStorage.removeItem('newsletter_subscriber');
         }
-      } catch (err) {
-        // User not authenticated
       }
     };
-    checkAuth();
+    checkSubscription();
   }, []);
 
   const [userInteractions, setUserInteractions] = useState<Record<string, 'like' | 'dislike' | null>>(() => {
@@ -57,16 +58,16 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
 
   const createCommentMutation = useMutation({
     mutationFn: async (newComment: any) => {
-      if (!user) {
-        setShowAuthModal(true);
-        throw new Error("Authentication required");
+      if (!subscriber) {
+        setShowSubscribeModal(true);
+        throw new Error("Subscription required");
       }
       
       const res = await apiRequest("POST", "/api/comments", {
         ...newComment,
-        userId: user.id,
-        userEmail: user.email,
-        userName: user.name || user.username
+        userId: null, // No user ID for subscribers
+        userEmail: subscriber.email,
+        userName: subscriber.name || userName
       });
       return res.json();
     },
@@ -76,7 +77,7 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
       setContent("");
     },
     onError: (error: any) => {
-      if (error.message !== "Authentication required") {
+      if (error.message !== "Subscription required") {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
     }
@@ -169,15 +170,15 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
       {/* Comment Form */}
       <Card className="mb-8 bg-slate-50">
         <CardContent className="p-6">
-          {user ? (
+          {subscriber ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="flex items-center gap-3 mb-4">
                 <Avatar className="w-10 h-10">
-                  <AvatarFallback>{user.name?.[0] || user.username?.[0] || 'U'}</AvatarFallback>
+                  <AvatarFallback>{subscriber.name?.[0] || 'S'}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium text-sm">{user.name || user.username}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                  <p className="font-medium text-sm">{subscriber.name}</p>
+                  <p className="text-xs text-muted-foreground">{subscriber.email}</p>
                 </div>
               </div>
               <div>
@@ -204,18 +205,13 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
               <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h4 className="font-medium text-lg mb-2">Join the Conversation</h4>
               <p className="text-muted-foreground mb-6">
-                Login to share your thoughts and engage with other readers.
+                Subscribe to our newsletter to share your thoughts and engage with other readers.
               </p>
               <div className="flex gap-3 justify-center">
-                <Link href="/login">
-                  <Button>
-                    <LogIn className="w-4 h-4 mr-2" />
-                    Login to Comment
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button variant="outline">Sign Up</Button>
-                </Link>
+                <Button onClick={() => setShowSubscribeModal(true)}>
+                  <Mail className="w-4 h-4 mr-2" />
+                  Subscribe to Comment
+                </Button>
               </div>
             </div>
           )}
@@ -279,25 +275,37 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
         )}
       </div>
 
-      {/* Authentication Modal */}
-      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+      {/* Subscription Modal */}
+      <Dialog open={showSubscribeModal} onOpenChange={setShowSubscribeModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Login Required</DialogTitle>
+            <DialogTitle>Subscribe to Comment</DialogTitle>
             <DialogDescription>
-              You need to be logged in to leave comments. This helps us maintain quality discussions and track engagement.
+              Subscribe to our newsletter to join the conversation and share your thoughts with other readers.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-3 mt-4">
-            <Link href="/login">
-              <Button className="flex-1">Login</Button>
-            </Link>
-            <Link href="/register">
-              <Button variant="outline" className="flex-1">Register</Button>
-            </Link>
+          <div className="mt-4">
+            <SubscribeForm />
           </div>
           <p className="text-sm text-muted-foreground mt-3 text-center">
-            Don't have an account? <Link href="/register" className="text-primary hover:underline">Sign up</Link> for free.
+            Already subscribed? <button 
+              onClick={() => {
+                setShowSubscribeModal(false);
+                // Check subscription again
+                const subscriberData = localStorage.getItem('newsletter_subscriber');
+                if (subscriberData) {
+                  try {
+                    const data = JSON.parse(subscriberData);
+                    setSubscriber(data);
+                  } catch (err) {
+                    // Ignore
+                  }
+                }
+              }}
+              className="text-primary hover:underline"
+            >
+              Refresh
+            </button>
           </p>
         </DialogContent>
       </Dialog>

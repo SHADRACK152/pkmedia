@@ -34,6 +34,7 @@ export default function ArticlePage() {
   
   const [hasLiked, setHasLiked] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [subscriber, setSubscriber] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -53,13 +54,30 @@ export default function ArticlePage() {
     checkAuth();
   }, []);
 
-  // Check if user has liked this article
+  // Check newsletter subscription
   useEffect(() => {
-    if (user && id) {
-      const likedArticles = JSON.parse(localStorage.getItem(`liked_articles_${user.id}`) || '[]');
+    const checkSubscription = () => {
+      const subscriberData = localStorage.getItem('newsletter_subscriber');
+      if (subscriberData) {
+        try {
+          const data = JSON.parse(subscriberData);
+          setSubscriber(data);
+        } catch (err) {
+          localStorage.removeItem('newsletter_subscriber');
+        }
+      }
+    };
+    checkSubscription();
+  }, []);
+
+  // Check if user/subscriber has liked this article
+  useEffect(() => {
+    if ((user || subscriber) && id) {
+      const storageKey = user ? `liked_articles_${user.id}` : `liked_articles_subscriber_${subscriber.email}`;
+      const likedArticles = JSON.parse(localStorage.getItem(storageKey) || '[]');
       setHasLiked(likedArticles.includes(id));
     }
-  }, [user, id]);
+  }, [user, subscriber, id]);
 
   const { data: article, isLoading, error } = useQuery<any>({
     queryKey: [`/api/articles/${id}`],
@@ -92,13 +110,14 @@ export default function ArticlePage() {
 
   const likeMutation = useMutation({
     mutationFn: async () => {
-      if (!user) {
+      if (!user && !subscriber) {
         setShowAuthModal(true);
         return;
       }
       
-      // Check if user already liked this article
-      const likedArticles = JSON.parse(localStorage.getItem(`liked_articles_${user.id}`) || '[]');
+      // Check if user/subscriber already liked this article
+      const storageKey = user ? `liked_articles_${user.id}` : `liked_articles_subscriber_${subscriber.email}`;
+      const likedArticles = JSON.parse(localStorage.getItem(storageKey) || '[]');
       if (likedArticles.includes(id)) {
         return; // Already liked
       }
@@ -106,11 +125,12 @@ export default function ArticlePage() {
       await apiRequest("POST", `/api/articles/${id}/like`);
     },
     onSuccess: () => {
-      if (user && id) {
-        const likedArticles = JSON.parse(localStorage.getItem(`liked_articles_${user.id}`) || '[]');
+      if ((user || subscriber) && id) {
+        const storageKey = user ? `liked_articles_${user.id}` : `liked_articles_subscriber_${subscriber.email}`;
+        const likedArticles = JSON.parse(localStorage.getItem(storageKey) || '[]');
         if (!likedArticles.includes(id)) {
           likedArticles.push(id);
-          localStorage.setItem(`liked_articles_${user.id}`, JSON.stringify(likedArticles));
+          localStorage.setItem(storageKey, JSON.stringify(likedArticles));
         }
         setHasLiked(true);
       }
@@ -447,7 +467,7 @@ export default function ArticlePage() {
           }
         `}</style>
 
-        <CommentSection articleId={id} />
+        <CommentSection articleId={id!} />
 
         </div>
       </main>
@@ -457,22 +477,43 @@ export default function ArticlePage() {
       <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Login Required</DialogTitle>
+            <DialogTitle>Login or Subscribe</DialogTitle>
             <DialogDescription>
-              You need to be logged in to like articles and leave comments. This helps us provide better content and track engagement.
+              Login as admin or subscribe to our newsletter to like articles and leave comments.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-3 mt-4">
-            <Link href="/login">
-              <Button className="flex-1">Login</Button>
-            </Link>
-            <Link href="/register">
-              <Button variant="outline" className="flex-1">Register</Button>
-            </Link>
+          <div className="space-y-4 mt-4">
+            <div>
+              <h4 className="font-medium mb-2">Admin Access:</h4>
+              <div className="flex gap-3">
+                <Link href="/login">
+                  <Button className="flex-1">Login</Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="outline" className="flex-1">Register</Button>
+                </Link>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Reader Access:</h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                Subscribe to our newsletter to engage with content
+              </p>
+              <Link href="/#newsletter">
+                <Button variant="outline" className="w-full">
+                  Subscribe to Newsletter
+                </Button>
+              </Link>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground mt-3 text-center">
-            Don't have an account? <Link href="/register" className="text-primary hover:underline">Sign up</Link> for free.
-          </p>
         </DialogContent>
       </Dialog>
     </div>

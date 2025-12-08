@@ -39,6 +39,9 @@ export default function SubscribeForm() {
         description: "Thank you for subscribing to our newsletter",
       });
 
+      // Store subscriber data in localStorage for comment access
+      localStorage.setItem('newsletter_subscriber', JSON.stringify({ email, name }));
+
       setEmail("");
       setName("");
     } catch (error) {

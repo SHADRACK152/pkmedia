@@ -147,6 +147,9 @@ export default function AdminDashboard() {
     return diff < 24 * 60 * 60 * 1000;
   }).length;
 
+  // Calculate active readers from traffic stats (total visitors in last 30 days)
+  const activeReaders = trafficStats.reduce((total: number, stat: any) => total + (stat.visitors || 0), 0);
+
   const getArticleTitle = (id: string) => {
     const a = articles.find((art: any) => art.id === id);
     return a ? a.title : 'Unknown Article';
@@ -820,7 +823,9 @@ export default function AdminDashboard() {
                   <CardContent className="p-6 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Active Readers</p>
-                      <h3 className="text-3xl font-bold mt-2">1.2k</h3>
+                      <h3 className="text-3xl font-bold mt-2">
+                        {activeReaders >= 1000 ? `${(activeReaders / 1000).toFixed(1)}k` : activeReaders}
+                      </h3>
                     </div>
                     <div className="p-3 bg-purple-100 rounded-full text-purple-600">
                       <Users className="h-6 w-6" />
@@ -1689,9 +1694,7 @@ export default function AdminDashboard() {
                               onClick={async () => {
                                 if (confirm(`Delete subscriber ${subscriber.email}?`)) {
                                   try {
-                                    await apiRequest(`/api/newsletter/subscribers/${subscriber.id}`, {
-                                      method: 'DELETE',
-                                    });
+                                    await apiRequest('DELETE', `/api/newsletter/subscribers/${subscriber.id}`);
                                     queryClient.invalidateQueries({ queryKey: ['/api/newsletter/subscribers'] });
                                     toast({ title: "Subscriber deleted" });
                                   } catch (error) {
