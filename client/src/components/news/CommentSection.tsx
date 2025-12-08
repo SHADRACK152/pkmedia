@@ -75,26 +75,33 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
 
   const createCommentMutation = useMutation({
     mutationFn: async (newComment: any) => {
+      console.log('Mutation called with:', newComment);
+      
       // Allow admins to comment without subscription check
       if (!(user?.role === 'admin' || subscriber)) {
+        console.log('Access denied - showing subscribe modal');
         setShowSubscribeModal(true);
         throw new Error("Subscription required");
       }
       
+      console.log('Making API request...');
       const res = await apiRequest("POST", "/api/comments", {
         ...newComment,
         userId: user?.id || null, // Use user ID if admin, null for subscribers
         userEmail: user?.email || subscriber?.email,
         userName: user?.name || user?.username || subscriber?.name || userName
       });
+      console.log('API response received');
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Comment created successfully:', data);
       queryClient.invalidateQueries({ queryKey: [`/api/articles/${articleId}/comments`] });
       toast({ title: "Comment Submitted", description: "Your comment has been submitted for review." });
       setContent("");
     },
     onError: (error: any) => {
+      console.error('Comment submission error:', error);
       if (error.message !== "Subscription required") {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
@@ -104,12 +111,21 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form submitted', { user, subscriber, userName, content });
+    
     // For admins and subscribers, we get name from their profile
     // For anonymous users, require a name input
     const hasValidName = user?.role === 'admin' || subscriber || userName.trim();
     
-    if (!hasValidName || !content.trim()) return;
+    console.log('Validation:', { hasValidName, contentValid: content.trim() });
+    
+    if (!hasValidName || !content.trim()) {
+      console.log('Validation failed');
+      return;
+    }
 
+    console.log('Submitting comment...');
+    
     createCommentMutation.mutate({
       articleId,
       userName: user?.name || user?.username || subscriber?.name || userName,
@@ -222,7 +238,11 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
                   className="bg-white min-h-[100px]"
                 />
               </div>
-              <Button type="submit" disabled={createCommentMutation.isPending}>
+              <Button 
+                type="submit" 
+                disabled={createCommentMutation.isPending || !content.trim()}
+                onClick={() => console.log('Button clicked')}
+              >
                 {createCommentMutation.isPending ? "Submitting..." : (
                   <>
                     <Send className="w-4 h-4 mr-2" /> Post Comment
