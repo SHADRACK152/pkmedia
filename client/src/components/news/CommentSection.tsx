@@ -76,7 +76,7 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
   const createCommentMutation = useMutation({
     mutationFn: async (newComment: any) => {
       // Allow admins to comment without subscription check
-      if (!user && !subscriber && user?.role !== 'admin') {
+      if (!(user?.role === 'admin' || subscriber)) {
         setShowSubscribeModal(true);
         throw new Error("Subscription required");
       }
@@ -103,11 +103,16 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userName.trim() || !content.trim()) return;
+    
+    // For admins and subscribers, we get name from their profile
+    // For anonymous users, require a name input
+    const hasValidName = user?.role === 'admin' || subscriber || userName.trim();
+    
+    if (!hasValidName || !content.trim()) return;
 
     createCommentMutation.mutate({
       articleId,
-      userName,
+      userName: user?.name || user?.username || subscriber?.name || userName,
       content,
       status: "Pending" // Default status
     });
