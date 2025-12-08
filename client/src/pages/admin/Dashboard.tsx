@@ -2154,9 +2154,9 @@ export default function AdminDashboard() {
                       {formData.images.length > 0 && (
                         <div className="mt-3 bg-slate-50 p-3 rounded-lg border">
                           <p className="text-xs text-muted-foreground mb-2">{formData.images.length} image(s) added</p>
-                          <div className="grid grid-cols-6 md:grid-cols-8 gap-1.5 max-h-24 overflow-y-auto">
+                          <div className="flex gap-2 overflow-x-auto pb-2">
                             {formData.images.map((img, index) => (
-                              <div key={index} className="relative group aspect-square bg-slate-100 rounded overflow-hidden border">
+                              <div key={index} className="relative group flex-shrink-0 w-20 h-20 bg-slate-100 rounded overflow-hidden border">
                                 <img src={img} alt={`${index + 1}`} className="w-full h-full object-cover" />
                                 <button
                                   type="button"
