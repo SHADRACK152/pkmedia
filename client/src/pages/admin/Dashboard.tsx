@@ -38,6 +38,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
 import { 
   Table, 
@@ -1860,20 +1861,18 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="category" className="text-base font-semibold">Category *</Label>
-                        <Select 
-                          name="category" 
-                          value={formData.category || "Politics"}
+                        <Combobox
+                          value={formData.category || ""}
                           onValueChange={(value) => setFormData({...formData, category: value})}
-                        >
-                          <SelectTrigger className="py-6">
-                            <SelectValue placeholder="Select Category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((cat: any) => (
-                              <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          options={categories.map((cat: any) => ({
+                            value: cat.name,
+                            label: cat.name
+                          }))}
+                          placeholder="Select or type category"
+                          searchPlaceholder="Type to search categories..."
+                          emptyText="No category found."
+                          className="py-6"
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="author" className="text-base font-semibold">Author Name *</Label>
