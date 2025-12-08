@@ -2093,18 +2093,20 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* URL Input */}
                         <div className="flex gap-2">
                           <Input 
                             value={additionalImageUrl}
                             onChange={(e) => setAdditionalImageUrl(e.target.value)}
-                            placeholder="https://example.com/image2.jpg or upload below" 
+                            placeholder="Paste image URL" 
                             className="flex-1"
+                            size="sm"
                           />
                           <Button 
                             type="button"
                             variant="outline"
+                            size="sm"
                             onClick={() => {
                               if (additionalImageUrl.trim()) {
                                 setFormData({...formData, images: [...formData.images, additionalImageUrl.trim()]});
@@ -2112,27 +2114,30 @@ export default function AdminDashboard() {
                               }
                             }}
                           >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add URL
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add
                           </Button>
                         </div>
                         
-                        {/* File Upload */}
-                        <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative">
+                        {/* File Upload - Multiple files */}
+                        <div className="border border-dashed border-slate-300 rounded-md p-3 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative">
                           <input 
                             type="file" 
                             accept="image/*,video/*"
+                            multiple
                             className="absolute inset-0 opacity-0 cursor-pointer"
                             onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                try {
-                                  const uploadRes = await uploadFileMutation.mutateAsync(file);
-                                  if (uploadRes.url) {
-                                    setFormData({...formData, images: [...formData.images, uploadRes.url]});
+                              const files = Array.from(e.target.files || []);
+                              if (files.length > 0) {
+                                for (const file of files) {
+                                  try {
+                                    const uploadRes = await uploadFileMutation.mutateAsync(file);
+                                    if (uploadRes.url) {
+                                      setFormData(prev => ({...prev, images: [...prev.images, uploadRes.url]}));
+                                    }
+                                  } catch (err) {
+                                    toast({ title: "Upload Error", description: `Failed to upload ${file.name}`, variant: "destructive" });
                                   }
-                                } catch (err) {
-                                  toast({ title: "Upload Error", description: "Failed to upload image", variant: "destructive" });
                                 }
                               }
                               // Reset the input
@@ -2140,30 +2145,31 @@ export default function AdminDashboard() {
                             }}
                           />
                           <div className="text-center pointer-events-none">
-                            <Upload className="h-8 w-8 text-slate-400 mx-auto mb-2" />
-                            <p className="text-sm font-medium text-slate-700">
-                              Click to upload from computer
-                            </p>
-                            <p className="text-xs text-slate-500 mt-1">Images or Videos (max. 50MB)</p>
+                            <Upload className="h-5 w-5 text-slate-400 mx-auto mb-1" />
+                            <p className="text-xs font-medium text-slate-700">Upload from computer</p>
+                            <p className="text-xs text-slate-500">Multiple files supported</p>
                           </div>
                         </div>
                       </div>
                       
                       {/* Display added images */}
                       {formData.images.length > 0 && (
-                        <div className="grid grid-cols-3 gap-3">
-                          {formData.images.map((img, index) => (
-                            <div key={index} className="relative group aspect-video bg-slate-100 rounded-lg overflow-hidden border">
-                              <img src={img} alt={`Additional ${index + 1}`} className="w-full h-full object-cover" />
-                              <button
-                                type="button"
-                                onClick={() => setFormData({...formData, images: formData.images.filter((_, i) => i !== index)})}
-                                className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            </div>
-                          ))}
+                        <div className="mt-3">
+                          <p className="text-xs text-muted-foreground mb-2">{formData.images.length} image(s) added</p>
+                          <div className="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                            {formData.images.map((img, index) => (
+                              <div key={index} className="relative group aspect-square bg-slate-100 rounded overflow-hidden border">
+                                <img src={img} alt={`${index + 1}`} className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => setFormData({...formData, images: formData.images.filter((_, i) => i !== index)})}
+                                  className="absolute top-0.5 right-0.5 bg-red-500 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
