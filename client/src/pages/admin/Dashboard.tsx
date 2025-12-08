@@ -2093,26 +2093,60 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       
-                      <div className="flex gap-2">
-                        <Input 
-                          value={additionalImageUrl}
-                          onChange={(e) => setAdditionalImageUrl(e.target.value)}
-                          placeholder="https://example.com/image2.jpg" 
-                          className="flex-1"
-                        />
-                        <Button 
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            if (additionalImageUrl.trim()) {
-                              setFormData({...formData, images: [...formData.images, additionalImageUrl.trim()]});
-                              setAdditionalImageUrl('');
-                            }
-                          }}
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add
-                        </Button>
+                      <div className="space-y-3">
+                        {/* URL Input */}
+                        <div className="flex gap-2">
+                          <Input 
+                            value={additionalImageUrl}
+                            onChange={(e) => setAdditionalImageUrl(e.target.value)}
+                            placeholder="https://example.com/image2.jpg or upload below" 
+                            className="flex-1"
+                          />
+                          <Button 
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              if (additionalImageUrl.trim()) {
+                                setFormData({...formData, images: [...formData.images, additionalImageUrl.trim()]});
+                                setAdditionalImageUrl('');
+                              }
+                            }}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add URL
+                          </Button>
+                        </div>
+                        
+                        {/* File Upload */}
+                        <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative">
+                          <input 
+                            type="file" 
+                            accept="image/*,video/*"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const uploadRes = await uploadFileMutation.mutateAsync(file);
+                                  if (uploadRes.url) {
+                                    setFormData({...formData, images: [...formData.images, uploadRes.url]});
+                                  }
+                                } catch (err) {
+                                  toast({ title: "Upload Error", description: "Failed to upload image", variant: "destructive" });
+                                }
+                              }
+                              // Reset the input
+                              e.target.value = '';
+                            }}
+                          />
+                          <div className="text-center pointer-events-none">
+                            <Upload className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+                            <p className="text-sm font-medium text-slate-700">
+                              Click to upload from computer
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">Images or Videos (max. 50MB)</p>
+                          </div>
+                        </div>
                       </div>
                       
                       {/* Display added images */}
