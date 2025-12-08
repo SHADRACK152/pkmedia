@@ -25,7 +25,7 @@ export default function Privacy() {
               <p className="text-sm text-gray-700 mt-2">We use data to deliver and personalise content, respond to enquiries, improve the site, and for analytics and security. We do not sell personal data to third parties.</p>
 
               <h3 className="mt-4 text-md font-semibold">Cookies and tracking</h3>
-              <p className="text-sm text-gray-700 mt-2">We use cookies for site functionality, analytics, and optional personalization. When you first visit our site, you'll see a cookie consent banner where you can choose to accept all cookies or only essential cookies. You can manage cookie preferences through your browser settings or via the cookie banner that appears on our site.</p>
+              <p className="text-sm text-gray-700 mt-2">We use cookies for site functionality, analytics, and optional personalization. You can manage cookie preferences through your browser settings or via any available site controls.</p>
 
               <h3 className="mt-4 text-md font-semibold">Your rights</h3>
               <p className="text-sm text-gray-700 mt-2">Depending on your jurisdiction, you may have rights to access, correct, export, or delete your personal information. To exercise these rights, contact us at <a href="mailto:privacy@pkmedia.co.ke" className="text-primary">privacy@pkmedia.co.ke</a>.</p>

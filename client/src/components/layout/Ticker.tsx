@@ -8,7 +8,17 @@ export default function BreakingNewsTicker() {
     queryKey: ['/api/articles'],
   });
   
-  const breakingNews = articles.filter(a => a.isBreaking);
+  // Filter breaking news that are less than 12 hours old
+  const breakingNews = articles.filter(a => {
+    if (!a.isBreaking) return false;
+    
+    const articleDate = new Date(a.createdAt);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - articleDate.getTime()) / (1000 * 60 * 60);
+    
+    return hoursDiff < 12; // Only show breaking news from last 12 hours
+  });
+  
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {

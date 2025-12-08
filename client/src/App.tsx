@@ -21,7 +21,6 @@ import Chatbot from "@/components/ui/chatbot";
 import ChatPage from "@/pages/Chat";
 import Register from "@/pages/Register";
 import Unsubscribe from "@/pages/Unsubscribe";
-import CookieConsent from "@/components/CookieConsent";
 import { useEffect } from "react";
 
 function Router() {
@@ -64,7 +63,6 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Chatbot />
-          <CookieConsent />
           <Router />
         </TooltipProvider>
       </QueryClientProvider>

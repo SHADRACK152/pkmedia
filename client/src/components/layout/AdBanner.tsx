@@ -1,72 +1,18 @@
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Ad } from "@shared/schema";
-import { useEffect } from "react";
-import { ADSENSE_CONFIG } from "@/lib/adsense";
-
-// Declare AdSense global
-declare global {
-  interface Window {
-    adsbygoogle: any[];
-  }
-}
 
 interface AdBannerProps {
   className?: string;
   format?: "square" | "horizontal" | "vertical" | "auto";
   label?: string;
   location?: "sidebar" | "header" | "footer";
-  adSense?: boolean;
-  adSlot?: string;
 }
 
-export default function AdBanner({ className, format = "auto", label = "Sponsored", location, adSense = false, adSlot }: AdBannerProps) {
+export default function AdBanner({ className, format = "auto", label = "Sponsored", location }: AdBannerProps) {
   const { data: ads = [] } = useQuery<Ad[]>({
     queryKey: ['/api/ads/active'],
   });
-
-  // AdSense ad rendering
-  useEffect(() => {
-    if (adSense && window.adsbygoogle) {
-      try {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (err) {
-        console.error('AdSense error:', err);
-      }
-    }
-  }, [adSense]);
-
-  // If AdSense is enabled, render AdSense ad
-  if (adSense && ADSENSE_CONFIG.enabled) {
-    const getAdSlot = () => {
-      if (adSlot) return adSlot;
-      // Default ad slots based on location
-      switch (location) {
-        case "header": return ADSENSE_CONFIG.adUnits.header;
-        case "sidebar": return ADSENSE_CONFIG.adUnits.sidebar;
-        case "footer": return ADSENSE_CONFIG.adUnits.footer;
-        default: return ADSENSE_CONFIG.adUnits.article;
-      }
-    };
-
-    return (
-      <div className={cn("ad-container", className)}>
-        <ins
-          className="adsbygoogle"
-          style={{
-            display: "block",
-            width: format === "square" ? "300px" : format === "horizontal" ? "100%" : "auto",
-            height: format === "square" ? "250px" : format === "horizontal" ? "90px" : "auto",
-            minHeight: format === "vertical" ? "600px" : "auto"
-          }}
-          data-ad-client={ADSENSE_CONFIG.publisherId}
-          data-ad-slot={getAdSlot()}
-          data-ad-format={format === "auto" ? "auto" : format === "horizontal" ? "horizontal" : "rectangle"}
-          data-full-width-responsive="true"
-        />
-      </div>
-    );
-  }
 
   // Filter ads by location if specified, otherwise use all active ads
   const relevantAds = location 
