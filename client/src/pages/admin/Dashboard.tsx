@@ -78,6 +78,7 @@ export default function AdminDashboard() {
     category: '',
     author: '',
     image: '',
+    imageAttribution: '', // Photo credit/source
     images: [] as string[], // Multiple images for slideshow
     tags: [] as string[]
   });
@@ -458,6 +459,7 @@ export default function AdminDashboard() {
       category: formData.category,
       author: formData.author,
       image: imageUrl,
+      imageAttribution: formData.imageAttribution || null,
       images: formData.images, // Include additional images for slideshow
       content: articleContent,
       tags: formData.tags,
@@ -489,6 +491,7 @@ export default function AdminDashboard() {
       category: article?.category || '',
       author: article?.author || '',
       image: article?.image || '',
+      imageAttribution: article?.imageAttribution || '',
       images: article?.images || [],
       tags: article?.tags || []
     });
@@ -2018,30 +2021,66 @@ export default function AdminDashboard() {
                     </div>
 
                     {imageUploadType === 'url' ? (
-                      <Input 
-                        id="image" 
-                        name="image" 
-                        value={formData.image}
-                        onChange={(e) => setFormData({...formData, image: e.target.value})}
-                        placeholder="https://example.com/image.jpg" 
-                        className="py-6"
-                      />
-                    ) : (
-                      <div className="border-2 border-dashed border-primary/30 rounded-xl p-8 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer relative">
-                        <input 
-                          type="file" 
-                          accept="image/*,video/*"
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          onChange={(e) => {
-                            if (e.target.files?.[0]) setUploadedFile(e.target.files[0]);
-                          }}
+                      <div className="space-y-3">
+                        <Input 
+                          id="image" 
+                          name="image" 
+                          value={formData.image}
+                          onChange={(e) => setFormData({...formData, image: e.target.value})}
+                          placeholder="https://example.com/image.jpg" 
+                          className="py-6"
                         />
-                        <div className="text-center">
-                          <Upload className="h-12 w-12 text-primary mx-auto mb-3" />
-                          <p className="text-base font-semibold text-slate-900 mb-1">
-                            {uploadedFile ? uploadedFile.name : "Click to upload or drag and drop"}
+                        <div>
+                          <Label htmlFor="imageAttribution" className="text-sm font-medium">
+                            Image Attribution / Photo Credit
+                          </Label>
+                          <Input 
+                            id="imageAttribution" 
+                            name="imageAttribution" 
+                            value={formData.imageAttribution}
+                            onChange={(e) => setFormData({...formData, imageAttribution: e.target.value})}
+                            placeholder="e.g., Photo by John Doe/Reuters or Unsplash" 
+                            className="mt-1"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Required for images not owned by PKMedia. Use format: "Photo by [Name]/[Source]"
                           </p>
-                          <p className="text-sm text-muted-foreground">Images or Videos (max. 50MB)</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="border-2 border-dashed border-primary/30 rounded-xl p-8 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer relative">
+                          <input 
+                            type="file" 
+                            accept="image/*,video/*"
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) setUploadedFile(e.target.files[0]);
+                            }}
+                          />
+                          <div className="text-center">
+                            <Upload className="h-12 w-12 text-primary mx-auto mb-3" />
+                            <p className="text-base font-semibold text-slate-900 mb-1">
+                              {uploadedFile ? uploadedFile.name : "Click to upload or drag and drop"}
+                            </p>
+                            <p className="text-sm text-muted-foreground">Images or Videos (max. 50MB)</p>
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="imageAttribution" className="text-sm font-medium">
+                            Image Attribution / Photo Credit
+                          </Label>
+                          <Input 
+                            id="imageAttribution" 
+                            name="imageAttribution" 
+                            value={formData.imageAttribution}
+                            onChange={(e) => setFormData({...formData, imageAttribution: e.target.value})}
+                            placeholder="e.g., Photo by John Doe/Reuters or Unsplash" 
+                            className="mt-1"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Required for images not owned by PKMedia. Use format: "Photo by [Name]/[Source]"
+                          </p>
                         </div>
                       </div>
                     )}
