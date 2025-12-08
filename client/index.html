@@ -44,8 +44,56 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&display=swap" rel="stylesheet">
     
-    <!-- Google AdSense -->
+    <!-- Google AdSense with CMP -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8505197252195048" crossorigin="anonymous"></script>
+    
+    <!-- Google CMP Scripts - Replace with your actual CMP code -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('consent', 'default', {
+        'ad_storage': 'denied',
+        'analytics_storage': 'denied',
+        'functionality_storage': 'granted',
+        'personalization_storage': 'denied',
+        'security_storage': 'granted'
+      });
+      gtag('set', 'ads_data_redirection', true);
+      gtag('set', 'url_passthrough', true);
+    </script>
+    <script src="https://fundingchoicesmessages.google.com/i/pub-8505197252195048?ers=1" async></script>
+    <script>
+      (function() {
+        function signalGooglefcPresent() {
+          if (!window.frames['googlefcPresent']) {
+            if (document.body) {
+              const iframe = document.createElement('iframe');
+              iframe.style = 'width: 0; height: 0; border: none; z-index: -1000; left: -1000px; top: -1000px;';
+              iframe.style.display = 'none';
+              iframe.name = 'googlefcPresent';
+              document.body.appendChild(iframe);
+            } else {
+              setTimeout(signalGooglefcPresent, 0);
+            }
+          }
+        }
+        signalGooglefcPresent();
+        function manageAds(data) {
+          if (data && data['newTCString']) {
+            gtag('consent', 'update', {
+              ad_storage: data.purpose.consents[1] ? 'granted' : 'denied',
+              analytics_storage: data.purpose.consents[1] ? 'granted' : 'denied',
+              functionality_storage: 'granted',
+              personalization_storage: data.purpose.consents[3] ? 'granted' : 'denied',
+              security_storage: 'granted'
+            });
+          }
+        }
+        window.googlefc = window.googlefc || {};
+        window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+        window.googlefc.callbackQueue.push(manageAds);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
