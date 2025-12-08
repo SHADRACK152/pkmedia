@@ -108,6 +108,9 @@ export default function Home() {
       
       <main className="flex-1 container mx-auto px-4 py-10">
         
+        {/* Hidden H1 for SEO */}
+        <h1 className="sr-only">PKMedia - Kenya and Worldwide News | Breaking News & Current Affairs</h1>
+        
         {/* Hero Section - Magazine Style */}
         {activeCategory === "All" && featuredArticle && (
           <section className="mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
