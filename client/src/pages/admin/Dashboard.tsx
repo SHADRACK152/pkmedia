@@ -1818,7 +1818,7 @@ export default function AdminDashboard() {
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 3 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
                           {currentStep > 3 ? '✓' : '3'}
                         </span>
-                        Content
+                        Slideshow Images
                       </span>
                     </div>
                     <div 
@@ -1827,6 +1827,16 @@ export default function AdminDashboard() {
                       <span className="flex items-center gap-2">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 4 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
                           {currentStep > 4 ? '✓' : '4'}
+                        </span>
+                        Content
+                      </span>
+                    </div>
+                    <div 
+                      className={`block px-4 py-3 text-sm font-medium rounded-lg transition-colors ${currentStep >= 5 ? 'text-primary bg-white' : 'text-slate-400 cursor-not-allowed'}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 5 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          {currentStep > 5 ? '✓' : '5'}
                         </span>
                         Publishing
                       </span>
@@ -2085,94 +2095,6 @@ export default function AdminDashboard() {
                       </div>
                     )}
                     
-                    {/* Additional Images for Slideshow */}
-                    <div className="space-y-3 mt-6 pt-6 border-t">
-                      <div>
-                        <Label className="text-base font-semibold">Additional Images (Optional)</Label>
-                        <p className="text-sm text-muted-foreground mb-3">Add more images to create a slideshow at the top of the article</p>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {/* URL Input */}
-                        <div className="flex gap-2">
-                          <Input 
-                            value={additionalImageUrl}
-                            onChange={(e) => setAdditionalImageUrl(e.target.value)}
-                            placeholder="Paste image URL" 
-                            className="flex-1"
-                            size="sm"
-                          />
-                          <Button 
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              if (additionalImageUrl.trim()) {
-                                setFormData({...formData, images: [...formData.images, additionalImageUrl.trim()]});
-                                setAdditionalImageUrl('');
-                              }
-                            }}
-                          >
-                            <Plus className="w-3 h-3 mr-1" />
-                            Add
-                          </Button>
-                        </div>
-                        
-                        {/* File Upload - Multiple files */}
-                        <div className="border border-dashed border-slate-300 rounded-md p-3 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer relative">
-                          <input 
-                            type="file" 
-                            accept="image/*,video/*"
-                            multiple
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                            onChange={async (e) => {
-                              const files = Array.from(e.target.files || []);
-                              if (files.length > 0) {
-                                for (const file of files) {
-                                  try {
-                                    const uploadRes = await uploadFileMutation.mutateAsync(file);
-                                    if (uploadRes.url) {
-                                      setFormData(prev => ({...prev, images: [...prev.images, uploadRes.url]}));
-                                    }
-                                  } catch (err) {
-                                    toast({ title: "Upload Error", description: `Failed to upload ${file.name}`, variant: "destructive" });
-                                  }
-                                }
-                              }
-                              // Reset the input
-                              e.target.value = '';
-                            }}
-                          />
-                          <div className="text-center pointer-events-none">
-                            <Upload className="h-5 w-5 text-slate-400 mx-auto mb-1" />
-                            <p className="text-xs font-medium text-slate-700">Upload from computer</p>
-                            <p className="text-xs text-slate-500">Multiple files supported</p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Display added images */}
-                      {formData.images.length > 0 && (
-                        <div className="mt-3 bg-slate-50 p-3 rounded-lg border">
-                          <p className="text-xs text-muted-foreground mb-2">{formData.images.length} image(s) added</p>
-                          <div className="flex gap-2 overflow-x-auto pb-2">
-                            {formData.images.map((img, index) => (
-                              <div key={index} className="relative group flex-shrink-0 w-20 h-20 bg-slate-100 rounded overflow-hidden border">
-                                <img src={img} alt={`${index + 1}`} className="w-full h-full object-cover" />
-                                <button
-                                  type="button"
-                                  onClick={() => setFormData({...formData, images: formData.images.filter((_, i) => i !== index)})}
-                                  className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    
                     <div className="flex justify-between mt-6 pt-4 border-t">
                       <Button 
                         type="button" 
@@ -2193,6 +2115,116 @@ export default function AdminDashboard() {
                         }}
                         className="px-8 py-6 text-base"
                       >
+                        Next: Slideshow Images →
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                )}
+
+                {/* Step 3: Slideshow Images */}
+                {currentStep === 3 && (
+                <div id="slideshow-images" className="mb-8 scroll-mt-6">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">3</span>
+                    Slideshow Images
+                  </h3>
+                  <div className="space-y-4 pl-8">
+                    <p className="text-sm text-muted-foreground">
+                      Add additional images to create a slideshow at the top of your article (Optional)
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* URL Input */}
+                      <div className="flex gap-2">
+                        <Input 
+                          value={additionalImageUrl}
+                          onChange={(e) => setAdditionalImageUrl(e.target.value)}
+                          placeholder="Paste image URL" 
+                          className="flex-1"
+                        />
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (additionalImageUrl.trim()) {
+                              setFormData({...formData, images: [...formData.images, additionalImageUrl.trim()]});
+                              setAdditionalImageUrl('');
+                            }
+                          }}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+                      
+                      {/* File Upload - Multiple files */}
+                      <div className="border-2 border-dashed border-primary/30 rounded-lg p-6 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer relative">
+                        <input 
+                          type="file" 
+                          accept="image/*,video/*"
+                          multiple
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={async (e) => {
+                            const files = Array.from(e.target.files || []);
+                            if (files.length > 0) {
+                              for (const file of files) {
+                                try {
+                                  const uploadRes = await uploadFileMutation.mutateAsync(file);
+                                  if (uploadRes.url) {
+                                    setFormData(prev => ({...prev, images: [...prev.images, uploadRes.url]}));
+                                  }
+                                } catch (err) {
+                                  toast({ title: "Upload Error", description: `Failed to upload ${file.name}`, variant: "destructive" });
+                                }
+                              }
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                        <div className="text-center pointer-events-none">
+                          <Upload className="h-8 w-8 text-primary mx-auto mb-2" />
+                          <p className="text-sm font-medium text-slate-700">Upload from computer</p>
+                          <p className="text-xs text-slate-500">Multiple files supported</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Display added images */}
+                    {formData.images.length > 0 && (
+                      <div className="mt-4 bg-slate-50 p-4 rounded-lg border">
+                        <p className="text-sm text-muted-foreground mb-3">{formData.images.length} image(s) added</p>
+                        <div className="flex gap-3 overflow-x-auto pb-2">
+                          {formData.images.map((img, index) => (
+                            <div key={index} className="relative group flex-shrink-0 w-24 h-24 bg-slate-100 rounded-lg overflow-hidden border-2">
+                              <img src={img} alt={`${index + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setFormData({...formData, images: formData.images.filter((_, i) => i !== index)})}
+                                className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between mt-6">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => setCurrentStep(2)}
+                        className="px-8 py-6 text-base"
+                      >
+                        ← Back
+                      </Button>
+                      <Button 
+                        type="button" 
+                        onClick={() => setCurrentStep(4)}
+                        className="px-8 py-6 text-base"
+                      >
                         Next: Article Content →
                       </Button>
                     </div>
@@ -2200,11 +2232,11 @@ export default function AdminDashboard() {
                 </div>
                 )}
 
-                {/* Step 3: Article Content */}
-                {currentStep === 3 && (
+                {/* Step 4: Article Content */}
+                {currentStep === 4 && (
                 <div id="article-content" className="mb-8 scroll-mt-6">
                   <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">3</span>
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">4</span>
                     Article Content
                   </h3>
                   <div className="space-y-3 pl-8">
@@ -2228,7 +2260,7 @@ export default function AdminDashboard() {
                       <Button 
                         type="button" 
                         variant="outline"
-                        onClick={() => setCurrentStep(2)}
+                        onClick={() => setCurrentStep(3)}
                         className="px-8 py-6 text-base"
                       >
                         ← Back
@@ -2237,7 +2269,7 @@ export default function AdminDashboard() {
                         type="button" 
                         onClick={() => {
                           if (articleContent.trim()) {
-                            setCurrentStep(4);
+                            setCurrentStep(5);
                           } else {
                             toast({ title: "Missing Content", description: "Please write your article content", variant: "destructive" });
                           }
@@ -2251,11 +2283,11 @@ export default function AdminDashboard() {
                 </div>
                 )}
 
-                {/* Step 4: Publishing Options */}
-                {currentStep === 4 && (
+                {/* Step 5: Publishing Options */}
+                {currentStep === 5 && (
                 <div id="publishing-options" className="mb-6 scroll-mt-6">
                   <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">4</span>
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">5</span>
                     Publishing Options
                   </h3>
                   <div className="pl-8">
@@ -2280,7 +2312,7 @@ export default function AdminDashboard() {
                       <Button 
                         type="button" 
                         variant="outline"
-                        onClick={() => setCurrentStep(3)}
+                        onClick={() => setCurrentStep(4)}
                         className="px-8 py-6 text-base"
                       >
                         ← Back
@@ -2294,7 +2326,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {currentStep === 4 && (
+              {currentStep === 5 && (
               <div className="flex gap-4 px-8 py-6 border-t bg-slate-50 shadow-lg">
                 <Button type="button" variant="outline" className="px-8 py-6 text-base" onClick={() => setIsArticleSheetOpen(false)}>
                   Cancel
