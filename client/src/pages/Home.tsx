@@ -103,7 +103,7 @@ export default function Home() {
       
       {/* Header Ad */}
       <div className="container mx-auto px-4 mt-6">
-        <AdBanner location="header" format="horizontal" className="h-24" />
+        <AdBanner location="header" format="horizontal" className="h-24" adSense={true} />
       </div>
       
       <main className="flex-1 container mx-auto px-4 py-10">
