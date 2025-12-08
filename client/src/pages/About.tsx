@@ -79,12 +79,14 @@ export default function About() {
                     <h4 className="font-semibold text-sm">Peter Kamau Kariuki</h4>
                     <p className="text-xs text-primary font-medium">Editor-in-Chief & Managing Director</p>
                     <p className="text-xs text-gray-600 mt-1">Peter brings 10 years of comprehensive media experience to PKMedia. A Maseno University graduate, he has worked extensively in content creation for government officials including PS Raymond Omollo and Governor Ann Waiguru, specializing in social media strategy and public communication. His decade-long career spans journalism, digital content creation, and media consultancy, with a focus on governance, development, and community-centered storytelling.</p>
+                    <p className="text-xs text-gray-600 mt-2"><a href="mailto:mtkenyanews1@gmail.com" className="text-primary hover:underline">mtkenyanews1@gmail.com</a></p>
                   </div>
                   
                   <div className="border-l-4 border-blue-500 pl-4 py-2">
                     <h4 className="font-semibold text-sm">Emadau Mark Shadrack</h4>
                     <p className="text-xs text-blue-600 font-medium">Senior Reporter & Technical Editor</p>
                     <p className="text-xs text-gray-600 mt-1">Mark brings 5 years of media experience to PKMedia, combining journalism with technical expertise. A Kabarak University graduate, he specializes in creating engaging video content (eCards) and comprehensive articles. His dual background in media and programming enables him to cover technology stories with depth and accuracy, while also contributing to PKMedia's digital infrastructure and multimedia storytelling capabilities.</p>
+                    <p className="text-xs text-gray-600 mt-2"><a href="mailto:markemadu@gmail.com" className="text-primary hover:underline">markemadu@gmail.com</a></p>
                   </div>
                   
                   <div className="border-l-4 border-green-500 pl-4 py-2">
