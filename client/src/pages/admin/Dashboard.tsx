@@ -1835,7 +1835,8 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Main Form Content */}
-                <div className="flex-1 overflow-y-auto px-8 py-6 max-w-5xl mx-auto w-full">
+                <div className="flex-1 overflow-y-auto px-8 py-6">
+                  <div className="max-w-4xl mx-auto w-full">
                 
                 {/* Step 1: Basic Info */}
                 {currentStep === 1 && (
@@ -2289,6 +2290,7 @@ export default function AdminDashboard() {
                 </div>
                 )}
 
+                </div>
                 </div>
               </div>
 
