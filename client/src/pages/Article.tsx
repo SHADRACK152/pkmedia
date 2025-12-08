@@ -14,6 +14,7 @@ import CommentSection from "@/components/news/CommentSection";
 import ShareButtons from "@/components/news/ShareButtons";
 import { Helmet } from 'react-helmet-async';
 import { extractIdFromSlug } from "@/lib/utils";
+import { SEO } from "@/components/SEO";
 
 export default function ArticlePage() {
   const [matchSlug, paramsSlug] = useRoute("/article/:slug");
@@ -111,11 +112,55 @@ export default function ArticlePage() {
     : `${typeof window !== 'undefined' ? window.location.origin : ''}${article.image}`;
   const absoluteUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`;
 
+  // Generate JSON-LD structured data for Google News
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    "headline": article.title,
+    "description": articleDescription,
+    "image": absoluteImageUrl,
+    "datePublished": article.createdAt,
+    "dateModified": article.updatedAt || article.createdAt,
+    "author": {
+      "@type": "Person",
+      "name": article.author
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "PKMedia",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://pkmedia.co.ke/pklogo.png"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": absoluteUrl
+    },
+    "articleSection": article.category,
+    "keywords": article.tags?.join(', '),
+    "inLanguage": "en-KE"
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans">
+      <SEO
+        title={`${article.title} - PKMedia`}
+        description={articleDescription}
+        image={absoluteImageUrl}
+        article={true}
+        publishedTime={article.createdAt}
+        modifiedTime={article.updatedAt || article.createdAt}
+        author={article.author}
+        canonicalUrl={absoluteUrl}
+        keywords={article.tags?.join(', ') || article.category}
+      />
+      
       <Helmet>
-        <title>{article.title} - PKMedia</title>
-        <meta name="description" content={articleDescription} />
+        {/* JSON-LD Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
         
         {/* Open Graph / Facebook / WhatsApp */}
         <meta property="og:type" content="article" />

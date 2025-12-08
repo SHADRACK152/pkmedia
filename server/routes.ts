@@ -1248,6 +1248,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sitemap XML endpoint
+  app.get("/sitemap.xml", async (req, res) => {
+    try {
+      const articles = await storage.getAllArticles();
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+      
+      const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  
+  <!-- Homepage -->
+  <url>
+    <loc>${baseUrl}</loc>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+    <lastmod>${new Date().toISOString()}</lastmod>
+  </url>
+  
+  <!-- Static Pages -->
+  <url>
+    <loc>${baseUrl}/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/contact</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/funders</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Articles -->
+${articles.map(article => {
+  const slug = article.title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .trim()
+    .substring(0, 60);
+  
+  const articleUrl = `${baseUrl}/article/${slug}__${article.id}`;
+  const publishDate = new Date(article.createdAt || Date.now()).toISOString();
+  const isRecent = (Date.now() - new Date(article.createdAt || 0).getTime()) < 2 * 24 * 60 * 60 * 1000; // 2 days
+  
+  return `  <url>
+    <loc>${articleUrl}</loc>
+    <lastmod>${publishDate}</lastmod>
+    <changefreq>${isRecent ? 'hourly' : 'weekly'}</changefreq>
+    <priority>${article.featured ? '0.9' : '0.8'}</priority>
+    ${article.image ? `<image:image>
+      <image:loc>${article.image.startsWith('http') ? article.image : baseUrl + article.image}</image:loc>
+      <image:title>${article.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</image:title>
+    </image:image>` : ''}
+    <news:news>
+      <news:publication>
+        <news:name>PKMedia - Kenya and Worldwide News</news:name>
+        <news:language>en</news:language>
+      </news:publication>
+      <news:publication_date>${publishDate}</news:publication_date>
+      <news:title>${article.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</news:title>
+    </news:news>
+  </url>`;
+}).join('\n')}
+  
+</urlset>`;
+
+      res.header('Content-Type', 'application/xml');
+      res.send(sitemap);
+    } catch (error: any) {
+      console.error("[sitemap] Error generating sitemap:", error);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  // Robots.txt endpoint
+  app.get("/robots.txt", (req, res) => {
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const robots = `User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: ${baseUrl}/sitemap.xml
+
+# Disallow admin pages
+User-agent: *
+Disallow: /admin
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+
+# Allow Google and other major search engines full access
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /`;
+
+    res.header('Content-Type', 'text/plain');
+    res.send(robots);
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

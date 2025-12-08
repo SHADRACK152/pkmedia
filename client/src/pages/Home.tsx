@@ -11,6 +11,7 @@ import { Link } from "wouter";
 import { Article, Category } from "@shared/schema";
 import ArticleCard from "@/components/news/ArticleCard";
 import { useToast } from "@/hooks/use-toast";
+import { SEO } from "@/components/SEO";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
@@ -96,6 +97,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col font-sans">
+      <SEO />
       <BreakingNewsTicker />
       <Navbar />
       

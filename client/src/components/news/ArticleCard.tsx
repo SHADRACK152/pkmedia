@@ -41,6 +41,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
           muted
           loop
           playsInline
+          loading="lazy"
           onMouseOver={(e) => e.currentTarget.play()}
           onMouseOut={(e) => e.currentTarget.pause()}
           className={className}
@@ -51,6 +52,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
       <img 
         src={article.image} 
         alt={article.title} 
+        loading="lazy"
         className={className}
       />
     );
