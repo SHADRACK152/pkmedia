@@ -22,7 +22,24 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
   const [userName, setUserName] = useState("");
   const [content, setContent] = useState("");
   const [subscriber, setSubscriber] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+
+  // Check user authentication (for admin access)
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        }
+      } catch (err) {
+        // User not authenticated
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Check newsletter subscription
   useEffect(() => {
@@ -58,16 +75,17 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
 
   const createCommentMutation = useMutation({
     mutationFn: async (newComment: any) => {
-      if (!subscriber) {
+      // Allow admins to comment without subscription check
+      if (!user && !subscriber && user?.role !== 'admin') {
         setShowSubscribeModal(true);
         throw new Error("Subscription required");
       }
       
       const res = await apiRequest("POST", "/api/comments", {
         ...newComment,
-        userId: null, // No user ID for subscribers
-        userEmail: subscriber.email,
-        userName: subscriber.name || userName
+        userId: user?.id || null, // Use user ID if admin, null for subscribers
+        userEmail: user?.email || subscriber?.email,
+        userName: user?.name || user?.username || subscriber?.name || userName
       });
       return res.json();
     },
@@ -170,15 +188,22 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
       {/* Comment Form */}
       <Card className="mb-8 bg-slate-50">
         <CardContent className="p-6">
-          {subscriber ? (
+          {(subscriber || user?.role === 'admin') ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="flex items-center gap-3 mb-4">
                 <Avatar className="w-10 h-10">
-                  <AvatarFallback>{subscriber.name?.[0] || 'S'}</AvatarFallback>
+                  <AvatarFallback>
+                    {user?.role === 'admin' ? (user.name?.[0] || user.username?.[0] || 'A') : (subscriber.name?.[0] || 'S')}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium text-sm">{subscriber.name}</p>
-                  <p className="text-xs text-muted-foreground">{subscriber.email}</p>
+                  <p className="font-medium text-sm">
+                    {user?.role === 'admin' ? (user.name || user.username) : subscriber.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {user?.role === 'admin' ? user.email : subscriber.email}
+                    {user?.role === 'admin' && <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Admin</span>}
+                  </p>
                 </div>
               </div>
               <div>

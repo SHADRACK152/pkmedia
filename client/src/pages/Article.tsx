@@ -110,7 +110,8 @@ export default function ArticlePage() {
 
   const likeMutation = useMutation({
     mutationFn: async () => {
-      if (!user && !subscriber) {
+      // Allow admins to like without subscription check
+      if (!user && !subscriber && user?.role !== 'admin') {
         setShowAuthModal(true);
         return;
       }
@@ -125,7 +126,7 @@ export default function ArticlePage() {
       await apiRequest("POST", `/api/articles/${id}/like`);
     },
     onSuccess: () => {
-      if ((user || subscriber) && id) {
+      if ((user || subscriber || user?.role === 'admin') && id) {
         const storageKey = user ? `liked_articles_${user.id}` : `liked_articles_subscriber_${subscriber.email}`;
         const likedArticles = JSON.parse(localStorage.getItem(storageKey) || '[]');
         if (!likedArticles.includes(id)) {
