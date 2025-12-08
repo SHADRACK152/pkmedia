@@ -2086,11 +2086,9 @@ export default function AdminDashboard() {
                     
                     {/* Additional Images for Slideshow */}
                     <div className="space-y-3 mt-6 pt-6 border-t">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label className="text-base font-semibold">Additional Images (Optional)</Label>
-                          <p className="text-sm text-muted-foreground">Add more images to create a slideshow at the top of the article</p>
-                        </div>
+                      <div>
+                        <Label className="text-base font-semibold">Additional Images (Optional)</Label>
+                        <p className="text-sm text-muted-foreground mb-3">Add more images to create a slideshow at the top of the article</p>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2154,18 +2152,18 @@ export default function AdminDashboard() {
                       
                       {/* Display added images */}
                       {formData.images.length > 0 && (
-                        <div className="mt-3">
+                        <div className="mt-3 bg-slate-50 p-3 rounded-lg border">
                           <p className="text-xs text-muted-foreground mb-2">{formData.images.length} image(s) added</p>
-                          <div className="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-32 overflow-y-auto">
+                          <div className="grid grid-cols-6 md:grid-cols-8 gap-1.5 max-h-24 overflow-y-auto">
                             {formData.images.map((img, index) => (
                               <div key={index} className="relative group aspect-square bg-slate-100 rounded overflow-hidden border">
                                 <img src={img} alt={`${index + 1}`} className="w-full h-full object-cover" />
                                 <button
                                   type="button"
                                   onClick={() => setFormData({...formData, images: formData.images.filter((_, i) => i !== index)})}
-                                  className="absolute top-0.5 right-0.5 bg-red-500 text-white p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
-                                  <X className="w-2.5 h-2.5" />
+                                  <X className="w-3 h-3" />
                                 </button>
                               </div>
                             ))}
