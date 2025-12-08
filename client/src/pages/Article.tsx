@@ -35,6 +35,7 @@ export default function ArticlePage() {
   const [hasLiked, setHasLiked] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   // Check user authentication
   useEffect(() => {
