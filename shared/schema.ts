@@ -104,6 +104,8 @@ export type ShortNews = typeof shortNews.$inferSelect;
 export const comments = pgTable("comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   articleId: varchar("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  userEmail: text("user_email"),
   userName: text("user_name").notNull(),
   content: text("content").notNull(),
   status: text("status").notNull().default('pending'),

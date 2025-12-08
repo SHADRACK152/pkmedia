@@ -15,6 +15,7 @@ import ShareButtons from "@/components/news/ShareButtons";
 import { Helmet } from 'react-helmet-async';
 import { extractIdFromSlug } from "@/lib/utils";
 import { SEO } from "@/components/SEO";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export default function ArticlePage() {
   const [matchSlug, paramsSlug] = useRoute("/article/:slug");
@@ -32,7 +33,32 @@ export default function ArticlePage() {
   }
   
   const [hasLiked, setHasLiked] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [user, setUser] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Check user authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        }
+      } catch (err) {
+        // User not authenticated
+      }
+    };
+    checkAuth();
+  }, []);
+
+  // Check if user has liked this article
+  useEffect(() => {
+    if (user && id) {
+      const likedArticles = JSON.parse(localStorage.getItem(`liked_articles_${user.id}`) || '[]');
+      setHasLiked(likedArticles.includes(id));
+    }
+  }, [user, id]);
 
   const { data: article, isLoading, error } = useQuery<any>({
     queryKey: [`/api/articles/${id}`],
@@ -65,11 +91,29 @@ export default function ArticlePage() {
 
   const likeMutation = useMutation({
     mutationFn: async () => {
+      if (!user) {
+        setShowAuthModal(true);
+        return;
+      }
+      
+      // Check if user already liked this article
+      const likedArticles = JSON.parse(localStorage.getItem(`liked_articles_${user.id}`) || '[]');
+      if (likedArticles.includes(id)) {
+        return; // Already liked
+      }
+      
       await apiRequest("POST", `/api/articles/${id}/like`);
     },
     onSuccess: () => {
+      if (user && id) {
+        const likedArticles = JSON.parse(localStorage.getItem(`liked_articles_${user.id}`) || '[]');
+        if (!likedArticles.includes(id)) {
+          likedArticles.push(id);
+          localStorage.setItem(`liked_articles_${user.id}`, JSON.stringify(likedArticles));
+        }
+        setHasLiked(true);
+      }
       queryClient.invalidateQueries({ queryKey: [`/api/articles/${id}`] });
-      setHasLiked(true);
     }
   });
 
@@ -298,11 +342,12 @@ export default function ArticlePage() {
                 variant={hasLiked ? "default" : "outline"} 
                 size="sm" 
                 className="gap-2"
-                onClick={() => !hasLiked && likeMutation.mutate()}
-                disabled={hasLiked}
+                onClick={() => likeMutation.mutate()}
+                disabled={hasLiked || likeMutation.isPending}
               >
                 <ThumbsUp className="w-4 h-4" />
                 {article.likes || 0}
+                {!user && <span className="text-xs ml-1">(Login to like)</span>}
               </Button>
 
               <div className="h-6 w-px bg-border mx-2"></div>
@@ -406,6 +451,29 @@ export default function ArticlePage() {
         </div>
       </main>
       <Footer />
+
+      {/* Authentication Modal */}
+      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in to like articles and leave comments. This helps us provide better content and track engagement.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Link href="/login">
+              <Button className="flex-1">Login</Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="outline" className="flex-1">Register</Button>
+            </Link>
+          </div>
+          <p className="text-sm text-muted-foreground mt-3 text-center">
+            Don't have an account? <Link href="/register" className="text-primary hover:underline">Sign up</Link> for free.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

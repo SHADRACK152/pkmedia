@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, Send, ThumbsUp, ThumbsDown, Share2 } from "lucide-react";
+import { MessageSquare, Send, ThumbsUp, ThumbsDown, Share2, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { Link } from "wouter";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface CommentSectionProps {
   articleId: string;
@@ -18,6 +20,24 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
   const { toast } = useToast();
   const [userName, setUserName] = useState("");
   const [content, setContent] = useState("");
+  const [user, setUser] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Check user authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        }
+      } catch (err) {
+        // User not authenticated
+      }
+    };
+    checkAuth();
+  }, []);
 
   const [userInteractions, setUserInteractions] = useState<Record<string, 'like' | 'dislike' | null>>(() => {
     const saved = localStorage.getItem('comment_interactions');
@@ -37,17 +57,28 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
 
   const createCommentMutation = useMutation({
     mutationFn: async (newComment: any) => {
-      const res = await apiRequest("POST", "/api/comments", newComment);
+      if (!user) {
+        setShowAuthModal(true);
+        throw new Error("Authentication required");
+      }
+      
+      const res = await apiRequest("POST", "/api/comments", {
+        ...newComment,
+        userId: user.id,
+        userEmail: user.email,
+        userName: user.name || user.username
+      });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/articles/${articleId}/comments`] });
       toast({ title: "Comment Submitted", description: "Your comment has been submitted for review." });
       setContent("");
-      // Keep username for convenience
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      if (error.message !== "Authentication required") {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
     }
   });
 
@@ -138,37 +169,56 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
       {/* Comment Form */}
       <Card className="mb-8 bg-slate-50">
         <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-              <Input 
-                id="name" 
-                placeholder="Your Name" 
-                value={userName} 
-                onChange={(e) => setUserName(e.target.value)}
-                required
-                className="bg-white"
-              />
+          {user ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex items-center gap-3 mb-4">
+                <Avatar className="w-10 h-10">
+                  <AvatarFallback>{user.name?.[0] || user.username?.[0] || 'U'}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium text-sm">{user.name || user.username}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="comment" className="block text-sm font-medium text-slate-700 mb-1">Comment</label>
+                <Textarea 
+                  id="comment" 
+                  placeholder="Share your thoughts..." 
+                  value={content} 
+                  onChange={(e) => setContent(e.target.value)}
+                  required
+                  className="bg-white min-h-[100px]"
+                />
+              </div>
+              <Button type="submit" disabled={createCommentMutation.isPending}>
+                {createCommentMutation.isPending ? "Submitting..." : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" /> Post Comment
+                  </>
+                )}
+              </Button>
+            </form>
+          ) : (
+            <div className="text-center py-8">
+              <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h4 className="font-medium text-lg mb-2">Join the Conversation</h4>
+              <p className="text-muted-foreground mb-6">
+                Login to share your thoughts and engage with other readers.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Link href="/login">
+                  <Button>
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Login to Comment
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="outline">Sign Up</Button>
+                </Link>
+              </div>
             </div>
-            <div>
-              <label htmlFor="comment" className="block text-sm font-medium text-slate-700 mb-1">Comment</label>
-              <Textarea 
-                id="comment" 
-                placeholder="Share your thoughts..." 
-                value={content} 
-                onChange={(e) => setContent(e.target.value)}
-                required
-                className="bg-white min-h-[100px]"
-              />
-            </div>
-            <Button type="submit" disabled={createCommentMutation.isPending}>
-              {createCommentMutation.isPending ? "Submitting..." : (
-                <>
-                  <Send className="w-4 h-4 mr-2" /> Post Comment
-                </>
-              )}
-            </Button>
-          </form>
+          )}
         </CardContent>
       </Card>
 
@@ -228,6 +278,29 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
           ))
         )}
       </div>
+
+      {/* Authentication Modal */}
+      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Login Required</DialogTitle>
+            <DialogDescription>
+              You need to be logged in to leave comments. This helps us maintain quality discussions and track engagement.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-4">
+            <Link href="/login">
+              <Button className="flex-1">Login</Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="outline" className="flex-1">Register</Button>
+            </Link>
+          </div>
+          <p className="text-sm text-muted-foreground mt-3 text-center">
+            Don't have an account? <Link href="/register" className="text-primary hover:underline">Sign up</Link> for free.
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
