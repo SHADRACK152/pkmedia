@@ -97,13 +97,19 @@ export default function ArticlePage() {
     }
   }, [article?.image, article?.images]);
 
-  // Increment view count on mount
+  // Increment view count on mount with rate limiting
   useEffect(() => {
     if (id) {
       const viewedKey = `viewed_article_${id}`;
-      if (!sessionStorage.getItem(viewedKey)) {
+      const lastViewTime = localStorage.getItem(`${viewedKey}_time`);
+      const now = Date.now();
+      const timeSinceLastView = lastViewTime ? now - parseInt(lastViewTime) : Infinity;
+
+      // Only count view if it's been more than 30 seconds since last view
+      // This prevents rapid refreshes from inflating counts
+      if (timeSinceLastView > 30000) {
         apiRequest("POST", `/api/articles/${id}/view`);
-        sessionStorage.setItem(viewedKey, "true");
+        localStorage.setItem(`${viewedKey}_time`, now.toString());
       }
     }
   }, [id]);
