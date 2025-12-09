@@ -484,31 +484,12 @@ export default function ArticlePage() {
       <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Login or Subscribe</DialogTitle>
+            <DialogTitle>Subscribe to Engage</DialogTitle>
             <DialogDescription>
-              Login as admin or subscribe to our newsletter to like articles and leave comments.
+              Subscribe to our newsletter to like articles and join the conversation.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            <div>
-              <h4 className="font-medium mb-2">Admin Access:</h4>
-              <div className="flex gap-3">
-                <Link href="/login">
-                  <Button className="flex-1">Login</Button>
-                </Link>
-                <Link href="/register">
-                  <Button variant="outline" className="flex-1">Register</Button>
-                </Link>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or</span>
-              </div>
-            </div>
             <div>
               <h4 className="font-medium mb-2">Reader Access:</h4>
               <p className="text-sm text-muted-foreground mb-3">
@@ -519,6 +500,28 @@ export default function ArticlePage() {
                   Subscribe to Newsletter
                 </Button>
               </Link>
+            </div>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Admin Access</span>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Administrator Login:</h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                Login to access admin features
+              </p>
+              <div className="flex gap-3">
+                <Link href="/login">
+                  <Button className="flex-1">Login</Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="outline" className="flex-1">Register</Button>
+                </Link>
+              </div>
             </div>
           </div>
         </DialogContent>
