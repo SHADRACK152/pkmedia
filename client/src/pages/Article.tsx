@@ -489,40 +489,20 @@ export default function ArticlePage() {
               Subscribe to our newsletter to like articles and join the conversation.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
+          <div className="mt-4">
             <div>
-              <h4 className="font-medium mb-2">Reader Access:</h4>
-              <p className="text-sm text-muted-foreground mb-3">
-                Subscribe to our newsletter to engage with content
+              <p className="text-sm text-muted-foreground mb-4">
+                Join our community of readers and get access to engage with articles, leave comments, and stay updated with the latest news.
               </p>
               <Link href="/#newsletter">
-                <Button variant="outline" className="w-full">
+                <Button className="w-full">
                   Subscribe to Newsletter
                 </Button>
               </Link>
             </div>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Admin Access</span>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">Administrator Login:</h4>
-              <p className="text-sm text-muted-foreground mb-3">
-                Login to access admin features
-              </p>
-              <div className="flex gap-3">
-                <Link href="/login">
-                  <Button className="flex-1">Login</Button>
-                </Link>
-                <Link href="/register">
-                  <Button variant="outline" className="flex-1">Register</Button>
-                </Link>
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground mt-4 text-center">
+              Already subscribed? <Link href="/#newsletter" className="text-primary hover:underline">Check your subscription</Link>
+            </p>
           </div>
         </DialogContent>
       </Dialog>
