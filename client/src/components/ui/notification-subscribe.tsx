@@ -116,7 +116,7 @@ export default function NotificationSubscribe() {
       });
 
       // Show a test notification
-      registration.showNotification('Mount Kenya News', {
+      registration.showNotification('PK Media News', {
         body: 'You\'re now subscribed to article notifications!',
         icon: '/logo.png',
         badge: '/logo.png'
