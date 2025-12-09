@@ -42,6 +42,11 @@ export default function SubscribeForm() {
       // Store subscriber data in localStorage for comment access
       localStorage.setItem('newsletter_subscriber', JSON.stringify({ email, name }));
 
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent('newsletterSubscribed', { 
+        detail: { email, name } 
+      }));
+
       setEmail("");
       setName("");
     } catch (error) {

@@ -67,7 +67,28 @@ export default function ArticlePage() {
         }
       }
     };
+    
     checkSubscription();
+    
+    // Listen for storage changes (when user subscribes)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'newsletter_subscriber') {
+        checkSubscription();
+      }
+    };
+    
+    // Listen for subscription events from the same tab
+    const handleSubscription = () => {
+      checkSubscription();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('newsletterSubscribed', handleSubscription);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('newsletterSubscribed', handleSubscription);
+    };
   }, []);
 
   // Check if user/subscriber has liked this article
@@ -375,7 +396,7 @@ export default function ArticlePage() {
               >
                 <ThumbsUp className="w-4 h-4" />
                 {article.likes || 0}
-                {!user && <span className="text-xs ml-1">(Login to like)</span>}
+                {!(user || subscriber) && <span className="text-xs ml-1">(Subscribe to like)</span>}
               </Button>
 
               <div className="h-6 w-px bg-border mx-2"></div>
