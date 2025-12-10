@@ -18,6 +18,7 @@ export interface IStorage {
   getAllArticles(): Promise<Article[]>;
   getAllArticlesAdmin(): Promise<Article[]>;
   getArticleById(id: string): Promise<Article | undefined>;
+  searchArticles(query: string, filters?: { category?: string; author?: string; tags?: string[]; dateFrom?: Date; dateTo?: Date }): Promise<Article[]>;
   createArticle(article: InsertArticle): Promise<Article>;
   updateArticle(id: string, article: Partial<Article>): Promise<Article | undefined>;
   deleteArticle(id: string): Promise<boolean>;
@@ -147,6 +148,45 @@ export class Storage implements IStorage {
   async getArticleById(id: string): Promise<Article | undefined> {
     const [article] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
     return article;
+  }
+
+  async searchArticles(query: string, filters?: { category?: string; author?: string; tags?: string[]; dateFrom?: Date; dateTo?: Date }): Promise<Article[]> {
+    let whereConditions = [sql`${articles.status} = 'published'`];
+
+    // Add text search if query provided
+    if (query && query.trim()) {
+      const searchTerm = query.trim();
+      whereConditions.push(sql`to_tsvector('english', ${articles.title} || ' ' || ${articles.content}) @@ plainto_tsquery('english', ${searchTerm})`);
+    }
+
+    // Add filters
+    if (filters?.category) {
+      whereConditions.push(eq(articles.category, filters.category));
+    }
+    if (filters?.author) {
+      whereConditions.push(sql`${articles.author} ILIKE ${'%' + filters.author + '%'}`);
+    }
+    if (filters?.tags && filters.tags.length > 0) {
+      // Check if any of the article's tags match the filter tags
+      const tagConditions = filters.tags.map(tag => sql`${articles.tags}::text[] @> ARRAY[${tag}]::text[]`);
+      whereConditions.push(sql`(${sql.join(tagConditions, sql` OR `)})`);
+    }
+    if (filters?.dateFrom) {
+      whereConditions.push(sql`coalesce(${articles.publishedAt}, ${articles.createdAt}) >= ${filters.dateFrom}`);
+    }
+    if (filters?.dateTo) {
+      whereConditions.push(sql`coalesce(${articles.publishedAt}, ${articles.createdAt}) <= ${filters.dateTo}`);
+    }
+
+    // Ensure articles are not in the future
+    whereConditions.push(sql`(${articles.publishedAt} IS NULL OR ${articles.publishedAt} <= NOW()) AND ${articles.createdAt} <= NOW()`);
+
+    return await db
+      .select()
+      .from(articles)
+      .where(sql.join(whereConditions, sql` AND `))
+      .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${articles.createdAt})`))
+      .limit(50); // Limit results for performance
   }
 
   async createArticle(insertArticle: InsertArticle): Promise<Article> {

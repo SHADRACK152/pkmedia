@@ -6,18 +6,20 @@ import Footer from "@/components/layout/Footer";
 import BreakingNewsTicker from "@/components/layout/Ticker";
 import ShortNewsFeed from "@/components/news/ShortNewsFeed";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ChevronRight, TrendingUp, FileText } from "lucide-react";
+import { ArrowRight, ChevronRight, TrendingUp, FileText, Search } from "lucide-react";
 import { Link } from "wouter";
 import { Article, Category } from "@shared/schema";
 import ArticleCard from "@/components/news/ArticleCard";
 import { useToast } from "@/hooks/use-toast";
 import { SEO } from "@/components/SEO";
+import SearchComponent from "@/components/SearchComponent";
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [visibleCount, setVisibleCount] = useState(6);
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -158,12 +160,23 @@ export default function Home() {
                 <span className="w-1.5 h-10 bg-gradient-to-b from-primary to-primary/50 rounded-full"></span>
                 {activeCategory === "All" ? "Latest Stories" : activeCategory}
               </h2>
-              <Link href="/archive">
-                 <Button variant="ghost" className="text-primary hover:text-primary/80 font-semibold hidden sm:flex items-center gap-1 group">
-                    View All 
-                    <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                 </Button>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setIsSearchOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Search className="w-4 h-4" />
+                  Search
+                </Button>
+                <Link href="/archive">
+                   <Button variant="ghost" className="text-primary hover:text-primary/80 font-semibold hidden sm:flex items-center gap-1 group">
+                      View All 
+                      <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                   </Button>
+                </Link>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -274,6 +287,11 @@ export default function Home() {
       </div>
       
       <Footer />
+      
+      <SearchComponent 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+      />
     </div>
   );
 }

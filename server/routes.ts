@@ -336,6 +336,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/articles/search", async (req, res) => {
+    try {
+      const { q, category, author, tags, dateFrom, dateTo } = req.query;
+      
+      const filters: any = {};
+      if (category) filters.category = category as string;
+      if (author) filters.author = author as string;
+      if (tags) filters.tags = (tags as string).split(',');
+      if (dateFrom) filters.dateFrom = new Date(dateFrom as string);
+      if (dateTo) filters.dateTo = new Date(dateTo as string);
+      
+      const articles = await storage.searchArticles(q as string || '', filters);
+      res.json(articles);
+    } catch (error: any) {
+      console.error("Error searching articles:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/articles/:id", async (req, res) => {
     try {
       const article = await storage.getArticleById(req.params.id);
