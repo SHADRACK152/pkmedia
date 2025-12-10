@@ -136,7 +136,7 @@ export class Storage implements IStorage {
     return await db
       .select()
       .from(articles)
-      .where(sql`${articles.status} = 'published' AND (${articles.publishedAt} IS NULL OR ${articles.publishedAt} <= NOW())`)
+      .where(sql`${articles.status} = 'published' AND (${articles.publishedAt} IS NULL OR ${articles.publishedAt} <= NOW()) AND ${articles.createdAt} <= NOW()`)
       .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${articles.createdAt})`));
   }
 
