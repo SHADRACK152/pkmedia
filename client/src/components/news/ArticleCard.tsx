@@ -17,8 +17,8 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
   // Short links are used for sharing, not internal navigation
   const articleUrl = `/article/${article.id}`;
   
-  const timeAgo = article.createdAt 
-    ? formatDistanceToNow(new Date(article.createdAt), { addSuffix: true })
+  const timeAgo = (article.publishedAt || article.createdAt)
+    ? formatDistanceToNow(new Date(article.publishedAt || article.createdAt), { addSuffix: true })
     : 'Just now';
 
   // Strip HTML tags from content for preview
