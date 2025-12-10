@@ -326,6 +326,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/articles/admin", requireAuth, async (req, res) => {
+    try {
+      const articles = await storage.getAllArticlesAdmin();
+      res.json(articles);
+    } catch (error: any) {
+      console.error("Error fetching articles:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/articles/:id", async (req, res) => {
     try {
       const article = await storage.getArticleById(req.params.id);
@@ -343,31 +353,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertArticleSchema.parse(req.body);
       const article = await storage.createArticle(validatedData);
       
-      // Automatically create a short link for the new article
-      console.log(`[articles] Creating short link for new article ${article.id}`);
-      const shortLink = await storage.createShortLink(article.id);
-      console.log(`[articles] Short link created: ${shortLink.code}`);
-      
-      // Send push notifications to all subscribers
-      try {
-        const subscriptions = await storage.getAllPushSubscriptions();
+      // Only create short link and send notifications for published articles
+      if (article.status === 'published') {
+        // Automatically create a short link for the new article
+        console.log(`[articles] Creating short link for new article ${article.id}`);
+        const shortLink = await storage.createShortLink(article.id);
+        console.log(`[articles] Short link created: ${shortLink.code}`);
         
-        if (subscriptions.length > 0) {
-          const webpush = await import('web-push');
-          const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
-          const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+        // Send push notifications to all subscribers
+        try {
+          const subscriptions = await storage.getAllPushSubscriptions();
           
-          if (vapidPublicKey && vapidPrivateKey) {
-            webpush.default.setVapidDetails(
-              'mailto:admin@pkmedia.co.ke',
-              vapidPublicKey,
-              vapidPrivateKey
-            );
+          if (subscriptions.length > 0) {
+            const webpush = await import('web-push');
+            const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+            const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+            
+            if (vapidPublicKey && vapidPrivateKey) {
+              webpush.default.setVapidDetails(
+                'mailto:admin@pkmedia.co.ke',
+                vapidPublicKey,
+                vapidPrivateKey
+              );
 
-            const payload = JSON.stringify({
-              title: article.isBreaking ? '🚨 Breaking News!' : '📰 New Article',
-              body: article.title,
-              url: `/article/${article.id}`,
+              const payload = JSON.stringify({
+                title: article.isBreaking ? '🚨 Breaking News!' : '📰 New Article',
+                body: article.title,
+                url: `/article/${article.id}`,
               image: article.image,
               articleId: article.id,
               icon: '/logo.png',
@@ -400,6 +412,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (notifError: any) {
         // Don't fail article creation if notifications fail
         console.error('[notifications] Failed to send push notifications:', notifError);
+      }
+      } else if (article.status === 'scheduled') {
+        console.log(`[articles] Article ${article.id} scheduled for ${article.scheduledFor}`);
       }
       
       res.json(article);
@@ -1367,6 +1382,82 @@ Allow: /`;
     res.header('Content-Type', 'text/plain');
     res.send(robots);
   });
+
+  // Scheduled Article Publisher - Check every minute for articles to publish
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const scheduledArticles = await storage.getScheduledArticles();
+      
+      for (const article of scheduledArticles) {
+        if (article.scheduledFor && new Date(article.scheduledFor) <= now) {
+          // Publish the article
+          await storage.publishScheduledArticle(article.id);
+          
+          // Create short link
+          console.log(`[scheduler] Creating short link for published article ${article.id}`);
+          const shortLink = await storage.createShortLink(article.id);
+          console.log(`[scheduler] Short link created: ${shortLink.code}`);
+          
+          // Send push notifications
+          try {
+            const subscriptions = await storage.getAllPushSubscriptions();
+            
+            if (subscriptions.length > 0) {
+              const webpush = await import('web-push');
+              const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+              const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+              
+              if (vapidPublicKey && vapidPrivateKey) {
+                webpush.default.setVapidDetails(
+                  'mailto:admin@pkmedia.co.ke',
+                  vapidPublicKey,
+                  vapidPrivateKey
+                );
+
+                const payload = JSON.stringify({
+                  title: article.isBreaking ? '🚨 Breaking News!' : '📰 New Article',
+                  body: article.title,
+                  url: `/article/${article.id}`,
+                  articleId: article.id,
+                  icon: '/logo.png',
+                  badge: '/logo.png'
+                });
+
+                let successCount = 0;
+                const sendPromises = subscriptions.map(async (sub: any) => {
+                  try {
+                    await webpush.default.sendNotification({
+                      endpoint: sub.endpoint,
+                      keys: {
+                        p256dh: sub.p256dh,
+                        auth: sub.auth
+                      }
+                    }, payload);
+                    successCount++;
+                  } catch (error: any) {
+                    // Remove invalid subscriptions
+                    if (error.statusCode === 410) {
+                      await storage.removePushSubscription(sub.endpoint);
+                    }
+                  }
+                });
+
+                await Promise.all(sendPromises);
+                console.log(`[scheduler] Sent ${successCount} push notifications for scheduled article ${article.id}`);
+              }
+            }
+          } catch (notifError: any) {
+            console.error('[scheduler] Failed to send push notifications:', notifError);
+          }
+          
+          console.log(`[scheduler] Published scheduled article: ${article.title} (${article.id})`);
+        }
+      }
+    } catch (error) {
+      console.error('[scheduler] Error checking scheduled articles:', error);
+    }
+  }, 60000); // Check every minute
 
   const httpServer = createServer(app);
 

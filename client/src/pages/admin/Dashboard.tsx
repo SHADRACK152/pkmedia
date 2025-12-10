@@ -96,10 +96,13 @@ export default function AdminDashboard() {
     linkUrl: '',
     isPinned: false
   });
+  const [publishOption, setPublishOption] = useState<'now' | 'schedule'>('now');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
 
   // Real Data Queries
   const { data: articles = [] } = useQuery<any[]>({
-    queryKey: ['/api/articles'],
+    queryKey: ['/api/articles/admin'],
   });
 
   const { data: categories = [] } = useQuery<any[]>({
@@ -469,6 +472,11 @@ export default function AdminDashboard() {
       tags: formData.tags,
       featured: (form.elements.namedItem('featured') as HTMLInputElement)?.checked || false,
       isBreaking: (form.elements.namedItem('breaking') as HTMLInputElement)?.checked || false,
+      status: publishOption === 'schedule' ? 'scheduled' : 'published',
+      scheduledFor: publishOption === 'schedule' && scheduledDate && scheduledTime 
+        ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString() 
+        : null,
+      publishedAt: publishOption === 'now' ? new Date().toISOString() : null,
     };
 
     if (editingArticle) {
@@ -501,6 +509,9 @@ export default function AdminDashboard() {
     });
     setTagInput('');
     setAdditionalImageUrl('');
+    setPublishOption('now');
+    setScheduledDate('');
+    setScheduledTime('');
     setIsArticleSheetOpen(true);
   };
 
@@ -1844,6 +1855,16 @@ export default function AdminDashboard() {
                         Publishing
                       </span>
                     </div>
+                    <div 
+                      className={`block px-4 py-3 text-sm font-medium rounded-lg transition-colors ${currentStep >= 6 ? 'text-primary bg-white' : 'text-slate-400 cursor-not-allowed'}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${currentStep >= 6 ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          {currentStep > 6 ? '✓' : '6'}
+                        </span>
+                        Schedule
+                      </span>
+                    </div>
                   </nav>
                 </div>
 
@@ -2272,14 +2293,14 @@ export default function AdminDashboard() {
                         type="button" 
                         onClick={() => {
                           if (articleContent.trim()) {
-                            setCurrentStep(5);
+                            setCurrentStep(6);
                           } else {
                             toast({ title: "Missing Content", description: "Please write your article content", variant: "destructive" });
                           }
                         }}
                         className="px-8 py-6 text-base"
                       >
-                        Next: Publishing Options →
+                        Next: Schedule Article →
                       </Button>
                     </div>
                   </div>
@@ -2320,6 +2341,101 @@ export default function AdminDashboard() {
                       >
                         ← Back
                       </Button>
+                      <Button 
+                        type="button" 
+                        onClick={() => setCurrentStep(6)}
+                        className="px-8 py-6 text-base"
+                      >
+                        Next: Schedule Article →
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                )}
+
+                {/* Step 6: Schedule Article */}
+                {currentStep === 6 && (
+                <div id="schedule-article" className="mb-6 scroll-mt-6">
+                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs">6</span>
+                    Schedule Article
+                  </h3>
+                  <div className="pl-8">
+                    <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border-2">
+                      <div className="space-y-4">
+                        <h4 className="text-lg font-semibold text-slate-900">When should this article be published?</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-center gap-3 p-4 bg-white rounded-lg border hover:border-primary/50 transition-colors cursor-pointer"
+                               onClick={() => setPublishOption('now')}>
+                            <input
+                              type="radio"
+                              id="publish-now"
+                              name="publish-option"
+                              checked={publishOption === 'now'}
+                              onChange={() => setPublishOption('now')}
+                              className="accent-primary"
+                            />
+                            <div>
+                              <Label htmlFor="publish-now" className="text-base font-semibold cursor-pointer">Publish Now</Label>
+                              <p className="text-xs text-muted-foreground">Article goes live immediately</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3 p-4 bg-white rounded-lg border hover:border-primary/50 transition-colors cursor-pointer"
+                               onClick={() => setPublishOption('schedule')}>
+                            <input
+                              type="radio"
+                              id="publish-schedule"
+                              name="publish-option"
+                              checked={publishOption === 'schedule'}
+                              onChange={() => setPublishOption('schedule')}
+                              className="accent-primary"
+                            />
+                            <div>
+                              <Label htmlFor="publish-schedule" className="text-base font-semibold cursor-pointer">Schedule for Later</Label>
+                              <p className="text-xs text-muted-foreground">Choose date and time to publish</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {publishOption === 'schedule' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border">
+                            <div className="space-y-2">
+                              <Label htmlFor="scheduled-date" className="text-sm font-medium">Publication Date</Label>
+                              <Input
+                                id="scheduled-date"
+                                type="date"
+                                value={scheduledDate}
+                                onChange={(e) => setScheduledDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
+                                required={publishOption === 'schedule'}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="scheduled-time" className="text-sm font-medium">Publication Time</Label>
+                              <Input
+                                id="scheduled-time"
+                                type="time"
+                                value={scheduledTime}
+                                onChange={(e) => setScheduledTime(e.target.value)}
+                                required={publishOption === 'schedule'}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between mt-6">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => setCurrentStep(5)}
+                        className="px-8 py-6 text-base"
+                      >
+                        ← Back
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -2329,13 +2445,13 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {currentStep === 5 && (
+              {currentStep === 6 && (
               <div className="flex gap-4 px-8 py-6 border-t bg-slate-50 shadow-lg">
                 <Button type="button" variant="outline" className="px-8 py-6 text-base" onClick={() => setIsArticleSheetOpen(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" className="flex-1 py-6 text-lg font-bold shadow-lg">
-                  {editingArticle ? "Update Article" : "Publish Article"}
+                  {editingArticle ? "Update Article" : (publishOption === 'schedule' ? "Schedule Article" : "Publish Article")}
                 </Button>
               </div>
               )}

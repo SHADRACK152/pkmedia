@@ -63,17 +63,20 @@ export const articles = pgTable("articles", {
   tags: text("tags").array().default(sql`'{}'::text[]`), // Array of tags
   isBreaking: boolean("is_breaking").default(false),
   featured: boolean("featured").default(false),
-  views: integer("views").default(0).notNull(),
-  likes: integer("likes").default(0).notNull(),
   status: text("status").notNull().default('published'),
+  scheduledFor: timestamp("scheduled_for"), // When to publish if scheduled
+  publishedAt: timestamp("published_at"), // Actual publish time
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  views: integer("views").default(0).notNull(),
+  likes: integer("likes").default(0).notNull(),
 });
 
 export const insertArticleSchema = createInsertSchema(articles).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  publishedAt: true,
 });
 export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articles.$inferSelect;

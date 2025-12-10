@@ -16,12 +16,15 @@ export interface IStorage {
   
   // Article operations
   getAllArticles(): Promise<Article[]>;
+  getAllArticlesAdmin(): Promise<Article[]>;
   getArticleById(id: string): Promise<Article | undefined>;
   createArticle(article: InsertArticle): Promise<Article>;
   updateArticle(id: string, article: Partial<InsertArticle>): Promise<Article | undefined>;
   deleteArticle(id: string): Promise<boolean>;
   incrementArticleViews(id: string): Promise<void>;
   incrementArticleLikes(id: string): Promise<void>;
+  getScheduledArticles(): Promise<Article[]>;
+  publishScheduledArticle(id: string): Promise<void>;
   
   // Category operations
   getAllCategories(): Promise<Category[]>;
@@ -130,6 +133,14 @@ export class Storage implements IStorage {
 
   // Article operations
   async getAllArticles(): Promise<Article[]> {
+    return await db
+      .select()
+      .from(articles)
+      .where(eq(articles.status, 'published'))
+      .orderBy(desc(articles.publishedAt || articles.createdAt));
+  }
+
+  async getAllArticlesAdmin(): Promise<Article[]> {
     return await db.select().from(articles).orderBy(desc(articles.createdAt));
   }
 
@@ -171,6 +182,25 @@ export class Storage implements IStorage {
       .update(articles)
       .set({ 
         likes: sql`${articles.likes} + 1` 
+      })
+      .where(eq(articles.id, id));
+  }
+
+  async getScheduledArticles(): Promise<Article[]> {
+    return await db
+      .select()
+      .from(articles)
+      .where(eq(articles.status, 'scheduled'))
+      .orderBy(articles.scheduledFor);
+  }
+
+  async publishScheduledArticle(id: string): Promise<void> {
+    await db
+      .update(articles)
+      .set({
+        status: 'published',
+        publishedAt: new Date(),
+        scheduledFor: null
       })
       .where(eq(articles.id, id));
   }
