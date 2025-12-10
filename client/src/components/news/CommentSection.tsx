@@ -6,12 +6,168 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, Send, ThumbsUp, ThumbsDown, Share2, Mail } from "lucide-react";
+import { MessageSquare, Send, ThumbsUp, ThumbsDown, Share2, Reply, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import SubscribeForm from "@/components/newsletter/SubscribeForm";
+
+interface CommentWithRepliesProps {
+  comment: any;
+  replies: any[];
+  onReply: (commentId: string | null) => void;
+  replyingTo: string | null;
+  replyContent: string;
+  setReplyContent: (content: string) => void;
+  onReplySubmit: (e: React.FormEvent, parentId: string) => void;
+  userInteractions: Record<string, 'like' | 'dislike' | null>;
+  onLike: (commentId: string) => void;
+  onDislike: (commentId: string) => void;
+  onShare: (commentId: string) => void;
+  canReply: boolean;
+}
+
+function CommentWithReplies({ 
+  comment, 
+  replies, 
+  onReply, 
+  replyingTo, 
+  replyContent, 
+  setReplyContent, 
+  onReplySubmit,
+  userInteractions,
+  onLike,
+  onDislike,
+  onShare,
+  canReply
+}: CommentWithRepliesProps) {
+  return (
+    <div className="space-y-4">
+      {/* Main Comment */}
+      <div className="flex gap-4 animate-in fade-in duration-500">
+        <Avatar>
+          <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${comment.userName}`} />
+          <AvatarFallback>{comment.userName.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="bg-slate-50 p-4 rounded-lg rounded-tl-none">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-slate-900">{comment.userName}</span>
+              <span className="text-xs text-slate-500">
+                {format(new Date(comment.createdAt), "MMM d, yyyy • h:mm a")}
+              </span>
+            </div>
+            <p className="text-slate-700 text-sm leading-relaxed mb-3">{comment.content}</p>
+            
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={`h-8 px-2 ${userInteractions[comment.id] === 'like' ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:text-blue-600'}`}
+                onClick={() => onLike(comment.id)}
+              >
+                <ThumbsUp className={`w-4 h-4 mr-1.5 ${userInteractions[comment.id] === 'like' ? 'fill-current' : ''}`} />
+                <span className="text-xs">{comment.likes || 0}</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={`h-8 px-2 ${userInteractions[comment.id] === 'dislike' ? 'text-red-600 bg-red-50' : 'text-slate-500 hover:text-red-600'}`}
+                onClick={() => onDislike(comment.id)}
+              >
+                <ThumbsDown className={`w-4 h-4 mr-1.5 ${userInteractions[comment.id] === 'dislike' ? 'fill-current' : ''}`} />
+                <span className="text-xs">{comment.dislikes || 0}</span>
+              </Button>
+              {canReply && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-2 text-slate-500 hover:text-green-600"
+                  onClick={() => onReply(replyingTo === comment.id ? null : comment.id)}
+                >
+                  <Reply className="w-4 h-4 mr-1.5" />
+                  <span className="text-xs">Reply</span>
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-2 text-slate-500 hover:text-purple-600"
+                onClick={() => onShare(comment.id)}
+              >
+                <Share2 className="w-4 h-4 mr-1.5" />
+                <span className="text-xs">{comment.shares || 0}</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Reply Form */}
+          {replyingTo === comment.id && (
+            <div className="mt-4 ml-8">
+              <form onSubmit={(e) => onReplySubmit(e, comment.id)} className="flex gap-3">
+                <Avatar className="w-8 h-8 mt-1">
+                  <AvatarFallback className="text-xs">You</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <Textarea
+                    placeholder={`Reply to ${comment.userName}...`}
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    className="min-h-[60px] text-sm"
+                    required
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <Button type="submit" size="sm" disabled={!replyContent.trim()}>
+                      <Send className="w-3 h-3 mr-1" />
+                      Reply
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        onReply(null);
+                        setReplyContent("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Replies */}
+      {replies.length > 0 && (
+        <div className="ml-12 space-y-3">
+          {replies.map((reply) => (
+            <div key={reply.id} className="flex gap-3">
+              <Avatar className="w-6 h-6">
+                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${reply.userName}`} />
+                <AvatarFallback className="text-xs">{reply.userName.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="bg-slate-100 p-3 rounded-lg">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-slate-900 text-sm">{reply.userName}</span>
+                    <span className="text-xs text-slate-500">
+                      {format(new Date(reply.createdAt), "MMM d, h:mm a")}
+                    </span>
+                  </div>
+                  <p className="text-slate-700 text-sm leading-relaxed">{reply.content}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface CommentSectionProps {
   articleId: string;
@@ -24,6 +180,8 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
   const [subscriber, setSubscriber] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
 
   // Check user authentication (for admin access)
   useEffect(() => {
@@ -114,8 +272,26 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
       articleId,
       userName: user?.name || user?.username || subscriber?.name || userName,
       content,
-      status: "Pending" // Default status
+      status: "Approved", // Top-level comments need approval
+      parentId: null
     });
+  };
+
+  const handleReplySubmit = (e: React.FormEvent, parentId: string) => {
+    e.preventDefault();
+    
+    if (!replyContent.trim()) return;
+
+    createCommentMutation.mutate({
+      articleId,
+      userName: user?.name || user?.username || subscriber?.name || userName,
+      content: replyContent,
+      status: "Approved", // Replies are approved immediately
+      parentId
+    });
+    
+    setReplyingTo(null);
+    setReplyContent("");
   };
 
   const likeMutation = useMutation({
@@ -180,8 +356,15 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
     }
   };
 
-  // Filter only approved comments for public view
+  // Separate top-level comments from replies
+  const topLevelComments = comments.filter(c => !c.parentId && c.status === 'Approved');
+  const replies = comments.filter(c => c.parentId);
   const approvedComments = comments.filter(c => c.status === 'Approved');
+
+  // Get replies for a specific comment
+  const getRepliesForComment = (commentId: string) => {
+    return replies.filter(r => r.parentId === commentId);
+  };
 
   return (
     <div className="mt-12 border-t pt-8">
@@ -253,57 +436,25 @@ export default function CommentSection({ articleId }: CommentSectionProps) {
 
       {/* Comments List */}
       <div className="space-y-6">
-        {approvedComments.length === 0 ? (
+        {topLevelComments.length === 0 ? (
           <p className="text-slate-500 italic">No comments yet. Be the first to share your thoughts!</p>
         ) : (
-          approvedComments.map((comment) => (
-            <div key={comment.id} className="flex gap-4 animate-in fade-in duration-500">
-              <Avatar>
-                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${comment.userName}`} />
-                <AvatarFallback>{comment.userName.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="bg-slate-50 p-4 rounded-lg rounded-tl-none">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-slate-900">{comment.userName}</span>
-                    <span className="text-xs text-slate-500">
-                      {format(new Date(comment.createdAt), "MMM d, yyyy • h:mm a")}
-                    </span>
-                  </div>
-                  <p className="text-slate-700 text-sm leading-relaxed mb-3">{comment.content}</p>
-                  
-                  <div className="flex items-center gap-4">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={`h-8 px-2 ${userInteractions[comment.id] === 'like' ? 'text-blue-600 bg-blue-50' : 'text-slate-500 hover:text-blue-600'}`}
-                      onClick={() => handleLike(comment.id)}
-                    >
-                      <ThumbsUp className={`w-4 h-4 mr-1.5 ${userInteractions[comment.id] === 'like' ? 'fill-current' : ''}`} />
-                      <span className="text-xs">{comment.likes || 0}</span>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={`h-8 px-2 ${userInteractions[comment.id] === 'dislike' ? 'text-red-600 bg-red-50' : 'text-slate-500 hover:text-red-600'}`}
-                      onClick={() => handleDislike(comment.id)}
-                    >
-                      <ThumbsDown className={`w-4 h-4 mr-1.5 ${userInteractions[comment.id] === 'dislike' ? 'fill-current' : ''}`} />
-                      <span className="text-xs">{comment.dislikes || 0}</span>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 px-2 text-slate-500 hover:text-green-600"
-                      onClick={() => shareMutation.mutate(comment.id)}
-                    >
-                      <Share2 className="w-4 h-4 mr-1.5" />
-                      <span className="text-xs">{comment.shares || 0}</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
+          topLevelComments.map((comment) => (
+            <CommentWithReplies 
+              key={comment.id} 
+              comment={comment} 
+              replies={getRepliesForComment(comment.id)}
+              onReply={setReplyingTo}
+              replyingTo={replyingTo}
+              replyContent={replyContent}
+              setReplyContent={setReplyContent}
+              onReplySubmit={handleReplySubmit}
+              userInteractions={userInteractions}
+              onLike={handleLike}
+              onDislike={handleDislike}
+              onShare={(id) => shareMutation.mutate(id)}
+              canReply={user?.role === 'admin' || subscriber}
+            />
           ))
         )}
       </div>
