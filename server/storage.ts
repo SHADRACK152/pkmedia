@@ -237,16 +237,16 @@ export class Storage implements IStorage {
 
   // Comment operations
   async getCommentsByArticle(articleId: string): Promise<Comment[]> {
-    return await db.select().from(comments).where(eq(comments.articleId, articleId)).orderBy(desc(comments.createdAt));
+    return await db.select().from(comments).where(eq(comments.articleId, articleId)).orderBy(desc(comments.createdAt)) as Comment[];
   }
 
   async getAllComments(): Promise<Comment[]> {
-    return await db.select().from(comments).orderBy(desc(comments.createdAt));
+    return await db.select().from(comments).orderBy(desc(comments.createdAt)) as Comment[];
   }
 
   async createComment(insertComment: InsertComment): Promise<Comment> {
     const [comment] = await db.insert(comments).values(insertComment).returning();
-    return comment;
+    return comment as Comment;
   }
 
   async updateCommentStatus(id: string, status: string): Promise<Comment | undefined> {
