@@ -137,7 +137,7 @@ export class Storage implements IStorage {
       .select()
       .from(articles)
       .where(eq(articles.status, 'published'))
-      .orderBy(desc(articles.publishedAt || articles.createdAt));
+      .orderBy(desc(sql`coalesce(${articles.publishedAt}, ${articles.createdAt})`));
   }
 
   async getAllArticlesAdmin(): Promise<Article[]> {
