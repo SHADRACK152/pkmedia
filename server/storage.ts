@@ -245,8 +245,8 @@ export class Storage implements IStorage {
   }
 
   async createComment(insertComment: InsertComment): Promise<Comment> {
-    const [comment] = await db.insert(comments).values(insertComment).returning();
-    return comment as Comment;
+    const [comment] = await db.insert(comments).values(insertComment).returning() as Comment[];
+    return comment;
   }
 
   async updateCommentStatus(id: string, status: string): Promise<Comment | undefined> {

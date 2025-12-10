@@ -1137,7 +1137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           template: {
             layout: templateStyle,
             type: newsletterType,
-            primaryColor: '#3b82f6',
+            headerColor: '#3b82f6',
             accentColor: '#1e40af'
           }
         }).catch(err => {

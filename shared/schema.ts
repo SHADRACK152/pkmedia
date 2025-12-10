@@ -104,7 +104,7 @@ export type InsertShortNews = z.infer<typeof insertShortNewsSchema>;
 export type ShortNews = typeof shortNews.$inferSelect;
 
 // Comments table
-export const comments = pgTable("comments", {
+export const comments: any = pgTable("comments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   articleId: varchar("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
   parentId: varchar("parent_id").references(() => comments.id, { onDelete: "cascade" }),
