@@ -19,7 +19,7 @@ export interface IStorage {
   getAllArticlesAdmin(): Promise<Article[]>;
   getArticleById(id: string): Promise<Article | undefined>;
   createArticle(article: InsertArticle): Promise<Article>;
-  updateArticle(id: string, article: Partial<InsertArticle>): Promise<Article | undefined>;
+  updateArticle(id: string, article: Partial<Article>): Promise<Article | undefined>;
   deleteArticle(id: string): Promise<boolean>;
   incrementArticleViews(id: string): Promise<void>;
   incrementArticleLikes(id: string): Promise<void>;
@@ -154,7 +154,7 @@ export class Storage implements IStorage {
     return article;
   }
 
-  async updateArticle(id: string, updateData: Partial<InsertArticle>): Promise<Article | undefined> {
+  async updateArticle(id: string, updateData: Partial<Article>): Promise<Article | undefined> {
     const [article] = await db
       .update(articles)
       .set({ ...updateData, updatedAt: new Date() })

@@ -351,7 +351,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/articles", requireAuth, async (req, res) => {
     try {
       const validatedData = insertArticleSchema.parse(req.body);
+      
+      // Validate scheduled articles have a scheduled time
+      if (validatedData.status === 'scheduled' && !validatedData.scheduledFor) {
+        return res.status(400).json({ error: "Scheduled articles must have a scheduled date and time" });
+      }
+      
+      // Validate scheduled time is in the future
+      if (validatedData.status === 'scheduled' && validatedData.scheduledFor) {
+        const scheduledTime = new Date(validatedData.scheduledFor);
+        if (scheduledTime <= new Date()) {
+          return res.status(400).json({ error: "Scheduled time must be in the future" });
+        }
+      }
+      
       const article = await storage.createArticle(validatedData);
+      
+      // Set publishedAt for immediately published articles
+      if (article.status === 'published') {
+        await storage.updateArticle(article.id, { publishedAt: new Date() });
+      }
       
       // Only create short link and send notifications for published articles
       if (article.status === 'published') {

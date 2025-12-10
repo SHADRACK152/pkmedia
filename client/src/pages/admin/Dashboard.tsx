@@ -476,7 +476,6 @@ export default function AdminDashboard() {
       scheduledFor: publishOption === 'schedule' && scheduledDate && scheduledTime 
         ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString() 
         : null,
-      publishedAt: publishOption === 'now' ? new Date().toISOString() : null,
     };
 
     if (editingArticle) {
