@@ -130,7 +130,6 @@ export default function SearchComponent({ isOpen, onClose, initialQuery = "" }: 
                     <SelectValue placeholder="All categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All categories</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.name}>
                         {cat.name}
