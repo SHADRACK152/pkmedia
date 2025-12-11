@@ -21,6 +21,7 @@ import Chatbot from "@/components/ui/chatbot";
 import ChatPage from "@/pages/Chat";
 import Register from "@/pages/Register";
 import Unsubscribe from "@/pages/Unsubscribe";
+import Sports from "@/pages/Sports";
 import { useEffect } from "react";
 
 function Router() {
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/unsubscribe" component={Unsubscribe} />
       <Route path="/login" component={AdminLogin} />
         <Route path="/register" component={Register} />
+      <Route path="/sports" component={Sports} />
       
       {/* Admin Routes */}
       <Route path="/admin/login" component={AdminLogin} />

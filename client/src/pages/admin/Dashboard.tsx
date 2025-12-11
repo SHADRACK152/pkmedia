@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Ad } from "@shared/schema";
+import { League, Team, Standing, Match } from "@shared/schema";
 import { 
   LayoutDashboard, 
   FileText, 
@@ -29,11 +30,13 @@ import {
   AlertCircle,
   TrendingUp,
   Clock,
+  Calendar,
   Megaphone,
   Mail,
   Newspaper,
   Pin,
-  PinOff
+  PinOff,
+  Trophy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,6 +99,7 @@ export default function AdminDashboard() {
     linkUrl: '',
     isPinned: false
   });
+  const [selectedLeagueForStandings, setSelectedLeagueForStandings] = useState("");
   const [publishOption, setPublishOption] = useState<'now' | 'schedule'>('now');
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
@@ -140,6 +144,23 @@ export default function AdminDashboard() {
 
   const { data: shortNews = [] } = useQuery<any[]>({
     queryKey: ['/api/short-news'],
+  });
+
+  // Sports data queries
+  const { data: leagues = [] } = useQuery<League[]>({
+    queryKey: ['/api/sports/leagues'],
+  });
+
+  const { data: teams = [] } = useQuery<Team[]>({
+    queryKey: ['/api/sports/teams'],
+  });
+
+  const { data: standings = [] } = useQuery<Standing[]>({
+    queryKey: ['/api/sports/standings'],
+  });
+
+  const { data: matches = [] } = useQuery<Match[]>({
+    queryKey: ['/api/sports/matches'],
   });
 
   const recentPostsCount = articles.filter((a: any) => {
@@ -446,6 +467,52 @@ export default function AdminDashboard() {
     }
   });
 
+  // Sports sync mutations
+  const syncLeaguesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/sports/sync/leagues");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sports/leagues'] });
+      toast({ title: "Leagues Synced", description: `Successfully synced ${data.success} leagues.`, variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Sync Failed", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const syncLeagueMutation = useMutation({
+    mutationFn: async (leagueId: string) => {
+      const res = await apiRequest("POST", `/api/sports/sync/league/${leagueId}`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sports/leagues'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sports/teams'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sports/standings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sports/matches'] });
+      toast({ title: "League Synced", description: `Successfully synced ${data.league} with ${data.teams.success} teams and ${data.matches.success} matches.`, variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Sync Failed", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const syncStandingsMutation = useMutation({
+    mutationFn: async (leagueId: string) => {
+      const res = await apiRequest("POST", `/api/sports/sync/standings/${leagueId}`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sports/standings'] });
+      toast({ title: "Standings Synced", description: `Successfully synced standings for ${data.standings} teams.`, variant: "default" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Sync Failed", description: error.message, variant: "destructive" });
+    }
+  });
+
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
@@ -710,6 +777,13 @@ export default function AdminDashboard() {
         </Button>
         <Button 
           variant="ghost" 
+          className={`w-full justify-start ${activeTab === 'sports' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
+          onClick={() => setActiveTab('sports')}
+        >
+          <Trophy className="mr-2 h-4 w-4" /> Sports Data
+        </Button>
+        <Button 
+          variant="ghost" 
           className={`w-full justify-start ${activeTab === 'settings' ? 'bg-slate-800 text-white' : 'hover:bg-slate-800 hover:text-white'}`}
           onClick={() => setActiveTab('settings')}
         >
@@ -965,6 +1039,237 @@ export default function AdminDashboard() {
                         </div>
                     </CardContent>
                 </Card>
+              </div>
+            </div>
+          )}
+
+          {/* SPORTS TAB */}
+          {activeTab === 'sports' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">Sports Data Management</h2>
+                <div className="text-sm text-muted-foreground">
+                  Sync football data from external APIs
+                </div>
+              </div>
+
+              <div className="grid gap-6">
+                {/* Sync Controls */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5" />
+                      Data Synchronization
+                    </CardTitle>
+                    <CardDescription>
+                      Sync league data, standings, teams, and matches from TheSportsDB API (completely free)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Quick Sync All Leagues</Label>
+                        <Button
+                          onClick={() => syncLeaguesMutation.mutate()}
+                          disabled={syncLeaguesMutation.isPending}
+                          className="w-full"
+                        >
+                          {syncLeaguesMutation.isPending ? 'Syncing...' : 'Sync All Leagues'}
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Sync Premier League</Label>
+                        <Button
+                          onClick={() => syncLeagueMutation.mutate('2021')}
+                          disabled={syncLeagueMutation.isPending}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          {syncLeagueMutation.isPending ? 'Syncing...' : 'Sync Premier League'}
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Sync Champions League</Label>
+                        <Button
+                          onClick={() => syncLeagueMutation.mutate('2001')}
+                          disabled={syncLeagueMutation.isPending}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          {syncLeagueMutation.isPending ? 'Syncing...' : 'Sync Champions League'}
+                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Sync Standings Only</Label>
+                        <div className="flex gap-2">
+                          <select
+                            className="flex-1 px-3 py-2 border rounded-md text-sm"
+                            value={selectedLeagueForStandings}
+                            onChange={(e) => setSelectedLeagueForStandings(e.target.value)}
+                          >
+                            <option value="">Select League</option>
+                            {leagues.map(league => (
+                              <option key={league.id} value={league.id}>
+                                {league.name}
+                              </option>
+                            ))}
+                          </select>
+                          <Button
+                            onClick={() => syncStandingsMutation.mutate(selectedLeagueForStandings)}
+                            disabled={!selectedLeagueForStandings || syncStandingsMutation.isPending}
+                            size="sm"
+                          >
+                            {syncStandingsMutation.isPending ? 'Syncing...' : 'Sync'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sync Status */}
+                    {(syncLeaguesMutation.isSuccess || syncLeagueMutation.isSuccess || syncStandingsMutation.isSuccess) && (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                        <div className="flex items-center gap-2 text-green-800">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span className="font-medium">Sync completed successfully!</span>
+                        </div>
+                        <div className="mt-2 text-sm text-green-700">
+                          {syncLeaguesMutation.data && `Leagues: ${syncLeaguesMutation.data.success} synced`}
+                          {syncLeagueMutation.data && `League: ${syncLeagueMutation.data.league} - Teams: ${syncLeagueMutation.data.teams.success}, Matches: ${syncLeagueMutation.data.matches.success}`}
+                          {syncStandingsMutation.data && `Standings: ${syncStandingsMutation.data.standings} teams updated`}
+                        </div>
+                      </div>
+                    )}
+
+                    {(syncLeaguesMutation.isError || syncLeagueMutation.isError || syncStandingsMutation.isError) && (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+                        <div className="flex items-center gap-2 text-red-800">
+                          <XCircle className="h-4 w-4" />
+                          <span className="font-medium">Sync failed</span>
+                        </div>
+                        <div className="mt-2 text-sm text-red-700">
+                          {syncLeaguesMutation.error?.message || syncLeagueMutation.error?.message || syncStandingsMutation.error?.message}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Current Data Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <Card>
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Leagues</p>
+                        <h3 className="text-3xl font-bold mt-2">{leagues.length}</h3>
+                      </div>
+                      <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+                        <Trophy className="h-6 w-6" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Teams</p>
+                        <h3 className="text-3xl font-bold mt-2">{teams.length}</h3>
+                      </div>
+                      <div className="p-3 bg-green-100 rounded-full text-green-600">
+                        <Users className="h-6 w-6" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Standings</p>
+                        <h3 className="text-3xl font-bold mt-2">{standings.length}</h3>
+                      </div>
+                      <div className="p-3 bg-purple-100 rounded-full text-purple-600">
+                        <BarChart3 className="h-6 w-6" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-6 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Matches</p>
+                        <h3 className="text-3xl font-bold mt-2">{matches.length}</h3>
+                      </div>
+                      <div className="p-3 bg-orange-100 rounded-full text-orange-600">
+                        <Calendar className="h-6 w-6" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Data Tables */}
+                <div className="grid gap-6 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Leagues</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {leagues.length === 0 ? (
+                          <p className="text-muted-foreground text-sm">No leagues synced yet</p>
+                        ) : (
+                          leagues.map(league => (
+                            <div key={league.id} className="flex items-center justify-between p-2 border rounded">
+                              <div className="flex items-center gap-2">
+                                {league.logo && (
+                                  <img src={league.logo} alt={league.name} className="w-6 h-6 object-contain" />
+                                )}
+                                <span className="font-medium">{league.name}</span>
+                              </div>
+                              <Badge variant="outline">{league.season}</Badge>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Matches</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {matches.slice(0, 5).length === 0 ? (
+                          <p className="text-muted-foreground text-sm">No matches available</p>
+                        ) : (
+                          matches.slice(0, 5).map(match => {
+                            const homeTeam = teams.find(t => t.id === match.homeTeamId);
+                            const awayTeam = teams.find(t => t.id === match.awayTeamId);
+                            return (
+                              <div key={match.id} className="flex items-center justify-between p-2 border rounded text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span>{homeTeam?.shortName || 'Unknown'}</span>
+                                  <span className="text-muted-foreground">vs</span>
+                                  <span>{awayTeam?.shortName || 'Unknown'}</span>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-medium">
+                                    {match.homeScore ?? '-'} - {match.awayScore ?? '-'}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {new Date(match.utcDate).toLocaleDateString()}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
           )}

@@ -108,6 +108,7 @@ export default function Navbar() {
 
   const navLinks = [
     { name: "Home", href: "/" },
+    { name: "Sports", href: "/sports" },
     ...categories.slice(0, 5).map(c => ({ name: c.name, href: `/category/${c.name}` }))
   ];
 

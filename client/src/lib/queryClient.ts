@@ -10,6 +10,13 @@ async function throwIfResNotOk(res: Response) {
       throw new Error(`${res.status}: ${res.statusText || 'Request failed'}`);
     }
   }
+
+  // Even if res.ok, check if we got HTML instead of expected content
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('text/html')) {
+    const text = await res.text();
+    throw new Error(`Received HTML response for API request. This might be due to a browser extension or routing issue. Content starts with: ${text.substring(0, 100)}`);
+  }
 }
 
 export async function apiRequest(

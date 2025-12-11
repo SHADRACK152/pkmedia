@@ -338,3 +338,101 @@ export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions
 });
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+// Sports tables for football leagues
+export const leagues = pgTable("leagues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(), // 'PL' for Premier League, 'CL' for Champions League
+  country: text("country").notNull(),
+  season: text("season").notNull(), // e.g., '2024-2025'
+  logo: text("logo"),
+  isActive: boolean("is_active").default(true),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertLeagueSchema = createInsertSchema(leagues).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+export type InsertLeague = z.infer<typeof insertLeagueSchema>;
+export type League = typeof leagues.$inferSelect;
+
+// Teams table
+export const teams = pgTable("teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  shortName: text("short_name"),
+  tla: text("tla"), // Three letter abbreviation
+  crest: text("crest"), // Team logo URL
+  website: text("website"),
+  founded: integer("founded"),
+  venue: text("venue"), // Stadium name
+  address: text("address"),
+  leagueId: varchar("league_id").references(() => leagues.id, { onDelete: "cascade" }),
+  apiId: integer("api_id"), // External API ID for data syncing
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type Team = typeof teams.$inferSelect;
+
+// Standings table
+export const standings = pgTable("standings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leagueId: varchar("league_id").notNull().references(() => leagues.id, { onDelete: "cascade" }),
+  teamId: varchar("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  position: integer("position").notNull(),
+  playedGames: integer("played_games").default(0),
+  won: integer("won").default(0),
+  draw: integer("draw").default(0),
+  lost: integer("lost").default(0),
+  points: integer("points").default(0),
+  goalsFor: integer("goals_for").default(0),
+  goalsAgainst: integer("goals_against").default(0),
+  goalDifference: integer("goal_difference").default(0),
+  form: text("form"), // Last 5 matches, e.g., "WWDLL"
+  season: text("season").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertStandingSchema = createInsertSchema(standings).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+export type InsertStanding = z.infer<typeof insertStandingSchema>;
+export type Standing = typeof standings.$inferSelect;
+
+// Matches table
+export const matches = pgTable("matches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leagueId: varchar("league_id").notNull().references(() => leagues.id, { onDelete: "cascade" }),
+  homeTeamId: varchar("home_team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  awayTeamId: varchar("away_team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  matchday: integer("matchday"),
+  status: text("status").notNull(), // SCHEDULED, LIVE, FINISHED, etc.
+  utcDate: timestamp("utc_date").notNull(),
+  homeScore: integer("home_score"),
+  awayScore: integer("away_score"),
+  winner: text("winner"), // HOME_TEAM, AWAY_TEAM, DRAW
+  season: text("season").notNull(),
+  apiId: integer("api_id"), // External API ID
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertMatchSchema = createInsertSchema(matches).omit({
+  id: true,
+  createdAt: true,
+  lastUpdated: true,
+});
+export type InsertMatch = z.infer<typeof insertMatchSchema>;
+export type Match = typeof matches.$inferSelect;

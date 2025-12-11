@@ -1,9 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { callGrok } from "./ai.js";
-import { sendWelcomeEmail, sendNewsletterEmail } from "./email.js";
-import { insertArticleSchema, insertCategorySchema, insertTagSchema, insertCommentSchema, insertUserSchema, insertAdSchema } from "../shared/schema.js";
+import { sportsService, LEAGUE_IDS } from "./sports-api.js";
+import { insertArticleSchema, insertCategorySchema, insertTagSchema, insertCommentSchema, insertUserSchema, insertAdSchema, insertLeagueSchema, insertTeamSchema, insertStandingSchema, insertMatchSchema } from "../shared/schema.js";
 import { z } from "zod";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
@@ -639,6 +638,364 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ success: true });
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Sports routes
+  // Leagues
+  app.get("/api/sports/leagues", async (req, res) => {
+    try {
+      const leagues = await storage.getAllLeagues();
+      res.json(leagues);
+    } catch (error: any) {
+      console.error("Error fetching leagues:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/sports/leagues/:id", async (req, res) => {
+    try {
+      const league = await storage.getLeagueById(req.params.id);
+      if (!league) {
+        return res.status(404).json({ error: "League not found" });
+      }
+      res.json(league);
+    } catch (error: any) {
+      console.error("Error fetching league:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Standings
+  app.get("/api/sports/leagues/:leagueId/standings", async (req, res) => {
+    try {
+      const standings = await storage.getStandingsByLeague(req.params.leagueId);
+      res.json(standings);
+    } catch (error: any) {
+      console.error("Error fetching standings:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Global standings
+  app.get("/api/sports/standings", async (req, res) => {
+    try {
+      const standings = await storage.getAllStandings();
+      res.json(standings);
+    } catch (error: any) {
+      console.error("Error fetching standings:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Teams
+  app.get("/api/sports/leagues/:leagueId/teams", async (req, res) => {
+    try {
+      const teams = await storage.getTeamsByLeague(req.params.leagueId);
+      res.json(teams);
+    } catch (error: any) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Global teams list
+  app.get("/api/sports/teams", async (req, res) => {
+    try {
+      const teams = await storage.getAllTeams();
+      res.json(teams);
+    } catch (error: any) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Matches
+  app.get("/api/sports/leagues/:leagueId/matches", async (req, res) => {
+    try {
+      const { limit, type } = req.query;
+      let matches;
+
+      if (type === 'upcoming') {
+        matches = await storage.getUpcomingMatches(req.params.leagueId, limit ? parseInt(limit as string) : undefined);
+      } else if (type === 'recent') {
+        matches = await storage.getRecentMatches(req.params.leagueId, limit ? parseInt(limit as string) : undefined);
+      } else {
+        matches = await storage.getMatchesByLeague(req.params.leagueId, limit ? parseInt(limit as string) : undefined);
+      }
+
+      res.json(matches);
+    } catch (error: any) {
+      console.error("Error fetching matches:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Global matches
+  app.get("/api/sports/matches", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const matches = await storage.getAllMatches(limit);
+      res.json(matches);
+    } catch (error: any) {
+      console.error("Error fetching matches:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin routes for managing sports data
+  app.post("/api/sports/leagues", requireAdmin, async (req, res) => {
+    try {
+      const validatedData = insertLeagueSchema.parse(req.body);
+      const league = await storage.createLeague(validatedData);
+      res.json(league);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sports/standings/:leagueId", requireAdmin, async (req, res) => {
+    try {
+      const standingsData = req.body.standings;
+      await storage.updateStandings(req.params.leagueId, standingsData);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Sync routes for fetching data from external APIs
+  app.post("/api/sports/sync/leagues", requireAdmin, async (req, res) => {
+    try {
+      console.log("[sports-sync] Starting league sync...");
+      const leagues = await sportsService.fetchLeagues();
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      let totalTeams = 0;
+      let totalStandings = 0;
+      let totalMatches = 0;
+
+      for (const league of leagues) {
+        try {
+          // Check if league already exists
+          const existing = await storage.getLeagueById(league.id);
+          if (existing) {
+            // Update existing league
+            const updated = await storage.updateLeague(league.id, league);
+            console.log(`[sports-sync] Updated league: ${updated?.id} ${updated?.name}`);
+          } else {
+            // Create new league
+            const created = await storage.createLeague(league);
+            console.log(`[sports-sync] Created league: ${created.id} ${created.name}`);
+          }
+          successCount++;
+          // After creating/updating the league, also do a full sync for teams/matches/standings
+          try {
+            const { teams, standings, matches } = await sportsService.syncLeagueData(league as any);
+
+            // Sync teams
+            for (const team of teams) {
+              try {
+                const existingTeam = await storage.getTeamById(team.id);
+                if (existingTeam) {
+                  await storage.updateTeam(team.id, team);
+                } else {
+                  await storage.createTeam(team);
+                }
+              } catch (err) {
+                console.error(`[sports-sync] Failed to sync team ${team.name} for league ${league.name}:`, err);
+              }
+            }
+            totalTeams += teams.length;
+
+            // Sync standings
+            try {
+              await storage.updateStandings(league.id, standings);
+              totalStandings += standings.length;
+            } catch (err) {
+              console.error(`[sports-sync] Failed to sync standings for league ${league.name}:`, err);
+            }
+
+            // Sync matches
+            for (const match of matches) {
+              try {
+                const existingMatch = await storage.getMatchById(match.id);
+                if (existingMatch) {
+                  await storage.updateMatch(match.id, match);
+                } else {
+                  await storage.createMatch(match);
+                }
+              } catch (err) {
+                console.error(`[sports-sync] Failed to sync match ${match.id} for league ${league.name}:`, err);
+              }
+            }
+            totalMatches += matches.length;
+          } catch (err) {
+            console.error(`[sports-sync] Error performing full sync for league ${league.name}:`, err);
+          }
+        } catch (error) {
+          console.error(`[sports-sync] Failed to sync league ${league.name}:`, error);
+          errorCount++;
+        }
+      }
+
+      console.log(`[sports-sync] League sync complete: ${successCount} success, ${errorCount} errors`);
+      res.json({
+        message: "League sync completed",
+        success: successCount,
+        errors: errorCount,
+        leagues: leagues.length,
+        teams: totalTeams,
+        standings: totalStandings,
+        matches: totalMatches,
+      });
+    } catch (error: any) {
+      console.error("[sports-sync] League sync failed:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sports/sync/league/:leagueId", requireAdmin, async (req, res) => {
+    try {
+      const leagueId = req.params.leagueId;
+      console.log(`[sports-sync] Starting full sync for league ${leagueId}...`);
+
+      // Get league from database
+      const league = await storage.getLeagueById(leagueId);
+      if (!league) {
+        return res.status(404).json({ error: "League not found in database. Please sync leagues first." });
+      }
+
+      const { teams, standings, matches } = await sportsService.syncLeagueData(league);
+
+      // Sync teams
+      let teamsSuccess = 0;
+      let teamsErrors = 0;
+      for (const team of teams) {
+        try {
+          const existingTeam = await storage.getTeamById(team.id);
+          if (existingTeam) {
+            await storage.updateTeam(team.id, team);
+          } else {
+            await storage.createTeam(team);
+          }
+          teamsSuccess++;
+        } catch (error) {
+          console.error(`[sports-sync] Failed to sync team ${team.name}:`, error);
+          teamsErrors++;
+        }
+      }
+
+      // Sync standings (replace existing)
+      try {
+        console.log(`[sports-sync] Preparing to insert standings for league ${leagueId}:`, JSON.stringify(standings.slice(0,5)));
+        await storage.updateStandings(leagueId, standings);
+      } catch (error) {
+        console.error(`[sports-sync] Failed to sync standings for league ${leagueId}:`, error);
+      }
+
+      // Sync matches
+      let matchesSuccess = 0;
+      let matchesErrors = 0;
+      for (const match of matches) {
+        try {
+          const existingMatch = await storage.getMatchById(match.id);
+          if (existingMatch) {
+            await storage.updateMatch(match.id, match);
+          } else {
+            await storage.createMatch(match);
+          }
+          matchesSuccess++;
+        } catch (error) {
+          console.error(`[sports-sync] Failed to sync match ${match.id}:`, error);
+          matchesErrors++;
+        }
+      }
+
+      console.log(`[sports-sync] Full sync complete for league ${leagueId}`);
+      res.json({
+        message: `Sync completed for league ${leagueId}`,
+        league: league.name,
+        teams: { success: teamsSuccess, errors: teamsErrors },
+        standings: standings.length,
+        matches: { success: matchesSuccess, errors: matchesErrors }
+      });
+    } catch (error: any) {
+      console.error(`[sports-sync] Full sync failed for league ${req.params.leagueId}:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/sports/sync/standings/:leagueId", requireAdmin, async (req, res) => {
+    try {
+      const leagueId = req.params.leagueId;
+      console.log(`[sports-sync] Syncing standings for league ${leagueId}...`);
+
+      const standings = await sportsService.fetchStandings(leagueId);
+      console.log(`[sports-sync] Standings payload sample for ${leagueId}:`, JSON.stringify(standings.slice(0,6)));
+
+      await storage.updateStandings(leagueId, standings);
+
+      console.log(`[sports-sync] Standings sync complete for league ${leagueId}: ${standings.length} teams`);
+      res.json({
+        message: `Standings synced for league ${leagueId}`,
+        standings: standings.length
+      });
+    } catch (error: any) {
+      console.error(`[sports-sync] Standings sync failed for league ${req.params.leagueId}:`, error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Debug: fetch raw standings from external provider without writing to DB
+  app.get('/api/sports/leagues/:leagueId/standings/raw', requireAdmin, async (req, res) => {
+    try {
+      const standings = await sportsService.fetchStandings(req.params.leagueId);
+      res.json(standings);
+    } catch (err: any) {
+      console.error('[sports-sync] Error fetching raw standings:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/sports/sync/matches/:leagueId", requireAdmin, async (req, res) => {
+    try {
+      const leagueId = req.params.leagueId;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+
+      console.log(`[sports-sync] Syncing matches for league ${leagueId} (limit: ${limit})...`);
+
+      const matches = await sportsService.fetchMatches(leagueId, limit);
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const match of matches) {
+        try {
+          const existingMatch = await storage.getMatchById(match.id);
+          if (existingMatch) {
+            await storage.updateMatch(match.id, match);
+          } else {
+            await storage.createMatch(match);
+          }
+          successCount++;
+        } catch (error) {
+          console.error(`[sports-sync] Failed to sync match ${match.id}:`, error);
+          errorCount++;
+        }
+      }
+
+      console.log(`[sports-sync] Matches sync complete for league ${leagueId}: ${successCount} success, ${errorCount} errors`);
+      res.json({
+        message: `Matches synced for league ${leagueId}`,
+        success: successCount,
+        errors: errorCount
+      });
+    } catch (error: any) {
+      console.error(`[sports-sync] Matches sync failed for league ${req.params.leagueId}:`, error);
       res.status(500).json({ error: error.message });
     }
   });

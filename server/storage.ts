@@ -1,6 +1,6 @@
 import { db } from "./db.js";
-import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks, newsletterSubscribers, pushSubscriptions, shortNews } from "../shared/schema.js";
-import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink, NewsletterSubscriber, InsertNewsletterSubscriber, PushSubscription, InsertPushSubscription, ShortNews, InsertShortNews } from "../shared/schema.js";
+import { users, articles, categories, tags, comments, ads, dailyStats, shortLinks, newsletterSubscribers, pushSubscriptions, shortNews, leagues, teams, standings, matches } from "../shared/schema.js";
+import type { User, InsertUser, Article, InsertArticle, Category, InsertCategory, Tag, InsertTag, Comment, InsertComment, Ad, InsertAd, DailyStats, ShortLink, InsertShortLink, NewsletterSubscriber, InsertNewsletterSubscriber, PushSubscription, InsertPushSubscription, ShortNews, InsertShortNews, League, InsertLeague, Team, InsertTeam, Standing, InsertStanding, Match, InsertMatch } from "../shared/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -86,6 +86,36 @@ export interface IStorage {
   deleteShortNews(id: string): Promise<boolean>;
   incrementShortNewsViews(id: string): Promise<void>;
   incrementShortNewsLikes(id: string): Promise<void>;
+
+  // Sports operations
+  // Leagues
+  getAllLeagues(): Promise<League[]>;
+  getLeagueById(id: string): Promise<League | undefined>;
+  getLeagueByCode(code: string): Promise<League | undefined>;
+  createLeague(league: InsertLeague): Promise<League>;
+  updateLeague(id: string, league: Partial<InsertLeague>): Promise<League | undefined>;
+
+  // Teams
+  getTeamsByLeague(leagueId: string): Promise<Team[]>;
+  getAllTeams(): Promise<Team[]>;
+  getTeamById(id: string): Promise<Team | undefined>;
+  createTeam(team: InsertTeam): Promise<Team>;
+  updateTeam(id: string, team: Partial<InsertTeam>): Promise<Team | undefined>;
+
+  // Standings
+  getStandingsByLeague(leagueId: string): Promise<Standing[]>;
+  getAllStandings(): Promise<Standing[]>;
+  updateStandings(leagueId: string, standings: InsertStanding[]): Promise<void>;
+  getTeamStanding(leagueId: string, teamId: string): Promise<Standing | undefined>;
+
+  // Matches
+  getMatchesByLeague(leagueId: string, limit?: number): Promise<Match[]>;
+  getAllMatches(limit?: number): Promise<Match[]>;
+  getUpcomingMatches(leagueId: string, limit?: number): Promise<Match[]>;
+  getRecentMatches(leagueId: string, limit?: number): Promise<Match[]>;
+  getMatchById(id: string): Promise<Match | undefined>;
+  createMatch(match: InsertMatch): Promise<Match>;
+  updateMatch(id: string, match: Partial<InsertMatch>): Promise<Match | undefined>;
 }
 
 export class Storage implements IStorage {
@@ -558,6 +588,171 @@ export class Storage implements IStorage {
     await db.update(shortNews)
       .set({ likes: sql`${shortNews.likes} + 1` })
       .where(eq(shortNews.id, id));
+  }
+
+  // Sports operations implementation
+
+  // Leagues
+  async getAllLeagues(): Promise<League[]> {
+    return await db.select().from(leagues).where(eq(leagues.isActive, true)).orderBy(leagues.name);
+  }
+
+  async getLeagueById(id: string): Promise<League | undefined> {
+    const [league] = await db.select().from(leagues).where(eq(leagues.id, id)).limit(1);
+    return league;
+  }
+
+  async getLeagueByCode(code: string): Promise<League | undefined> {
+    const [league] = await db.select().from(leagues).where(eq(leagues.code, code)).limit(1);
+    return league;
+  }
+
+  async createLeague(league: InsertLeague): Promise<League> {
+    const [created] = await db.insert(leagues).values(league).returning();
+    return created;
+  }
+
+  async updateLeague(id: string, league: Partial<InsertLeague>): Promise<League | undefined> {
+    const [updated] = await db.update(leagues)
+      .set({ ...league, lastUpdated: new Date() })
+      .where(eq(leagues.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Teams
+  async getTeamsByLeague(leagueId: string): Promise<Team[]> {
+    return await db.select().from(teams).where(eq(teams.leagueId, leagueId)).orderBy(teams.name);
+  }
+
+  async getAllTeams(): Promise<Team[]> {
+    return await db.select().from(teams).orderBy(teams.name);
+  }
+
+  async getTeamById(id: string): Promise<Team | undefined> {
+    const [team] = await db.select().from(teams).where(eq(teams.id, id)).limit(1);
+    return team;
+  }
+
+  async createTeam(team: InsertTeam): Promise<Team> {
+    const [created] = await db.insert(teams).values(team).returning();
+    return created;
+  }
+
+  async updateTeam(id: string, team: Partial<InsertTeam>): Promise<Team | undefined> {
+    // Do not overwrite the leagueId when updating an existing team; teams may be shared across leagues.
+    const { leagueId: _ignoreLeague, ...rest } = team as any;
+    const [updated] = await db.update(teams)
+      .set(rest)
+      .where(eq(teams.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Standings
+  async getStandingsByLeague(leagueId: string): Promise<Standing[]> {
+    return await db
+      .select()
+      .from(standings)
+      .where(eq(standings.leagueId, leagueId))
+      .orderBy(standings.position);
+  }
+
+  async getAllStandings(): Promise<Standing[]> {
+    return await db
+      .select()
+      .from(standings)
+      .orderBy(standings.leagueId, standings.position);
+  }
+
+  async updateStandings(leagueId: string, standingsData: InsertStanding[]): Promise<void> {
+    // First delete existing standings for this league
+    await db.delete(standings).where(eq(standings.leagueId, leagueId));
+
+    // Insert new standings
+    if (standingsData.length > 0) {
+      await db.insert(standings).values(standingsData);
+    }
+  }
+
+  async getTeamStanding(leagueId: string, teamId: string): Promise<Standing | undefined> {
+    const [standing] = await db
+      .select()
+      .from(standings)
+      .where(sql`${standings.leagueId} = ${leagueId} AND ${standings.teamId} = ${teamId}`)
+      .limit(1);
+    return standing;
+  }
+
+  // Matches
+  async getMatchesByLeague(leagueId: string, limit?: number): Promise<Match[]> {
+    const query = db
+      .select()
+      .from(matches)
+      .where(eq(matches.leagueId, leagueId))
+      .orderBy(desc(matches.utcDate));
+
+    if (limit) {
+      return await query.limit(limit);
+    }
+
+    return await query;
+  }
+
+  async getAllMatches(limit?: number): Promise<Match[]> {
+    const query = db
+      .select()
+      .from(matches)
+      .orderBy(desc(matches.utcDate));
+
+    if (limit) return await query.limit(limit);
+    return await query;
+  }
+
+  async getUpcomingMatches(leagueId: string, limit?: number): Promise<Match[]> {
+    const query = db
+      .select()
+      .from(matches)
+      .where(sql`${matches.leagueId} = ${leagueId} AND ${matches.status} = 'SCHEDULED' AND ${matches.utcDate} > NOW()`)
+      .orderBy(matches.utcDate);
+
+    if (limit) {
+      return await query.limit(limit);
+    }
+
+    return await query;
+  }
+
+  async getRecentMatches(leagueId: string, limit?: number): Promise<Match[]> {
+    const query = db
+      .select()
+      .from(matches)
+      .where(sql`${matches.leagueId} = ${leagueId} AND ${matches.status} = 'FINISHED'`)
+      .orderBy(desc(matches.utcDate));
+
+    if (limit) {
+      return await query.limit(limit);
+    }
+
+    return await query;
+  }
+
+  async getMatchById(id: string): Promise<Match | undefined> {
+    const [match] = await db.select().from(matches).where(eq(matches.id, id)).limit(1);
+    return match;
+  }
+
+  async createMatch(match: InsertMatch): Promise<Match> {
+    const [created] = await db.insert(matches).values(match).returning();
+    return created;
+  }
+
+  async updateMatch(id: string, match: Partial<InsertMatch>): Promise<Match | undefined> {
+    const [updated] = await db.update(matches)
+      .set({ ...match, lastUpdated: new Date() })
+      .where(eq(matches.id, id))
+      .returning();
+    return updated;
   }
 }
 
