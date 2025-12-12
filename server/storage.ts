@@ -634,6 +634,12 @@ export class Storage implements IStorage {
     return team;
   }
 
+  async getTeamByApiId(apiId: number | string): Promise<Team | undefined> {
+    const idNum = typeof apiId === 'string' ? parseInt(apiId, 10) : apiId;
+    const [team] = await db.select().from(teams).where(eq(teams.apiId, idNum)).limit(1);
+    return team;
+  }
+
   async createTeam(team: InsertTeam): Promise<Team> {
     const [created] = await db.insert(teams).values(team).returning();
     return created;

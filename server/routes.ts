@@ -450,6 +450,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Don't fail article creation if notifications fail
         console.error('[notifications] Failed to send push notifications:', notifError);
       }
+        // Try posting to Facebook (best-effort). This uses server-side Page access token.
+        try {
+          const fbModule = await import('./facebook.js');
+          // Create short link object if created earlier
+          try {
+            const shortLink = await storage.getShortLinkByArticleId(article.id).catch(() => null);
+            await fbModule.postArticleToFacebook(article, shortLink || null);
+          } catch (fbErr: any) {
+            console.error('[facebook] Posting article to Facebook failed:', fbErr);
+          }
+        } catch (impErr: any) {
+          console.warn('[facebook] Facebook module not available or failed to import:', impErr.message || impErr);
+        }
       } else if (article.status === 'scheduled') {
         console.log(`[articles] Article ${article.id} scheduled for ${article.scheduledFor}`);
       }
@@ -937,7 +950,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const standings = await sportsService.fetchStandings(leagueId);
       console.log(`[sports-sync] Standings payload sample for ${leagueId}:`, JSON.stringify(standings.slice(0,6)));
 
-      await storage.updateStandings(leagueId, standings);
+      // Map standings to existing teams to avoid FK errors
+      const leagueTeams = await storage.getTeamsByLeague(leagueId);
+      const teamsByApiId: Record<string, string> = {};
+      const teamsByName: Record<string, string> = {};
+      for (const t of leagueTeams) {
+        if (t.apiId) teamsByApiId[String(t.apiId)] = t.id;
+        if (t.name) teamsByName[t.name.toLowerCase()] = t.id;
+        if (t.shortName) teamsByName[t.shortName.toLowerCase()] = t.id;
+      }
+
+      const mappedStandings = standings.map(s => {
+        // If s.teamId already looks like a DB id (league_apiid), keep as-is
+        if (s.teamId && String(s.teamId).startsWith(`${leagueId}_`)) {
+          return s;
+        }
+
+        // If s.teamId is numeric (external API id), map to DB id
+        if (s.teamId && String(s.teamId).match(/^\d+$/)) {
+          const dbId = teamsByApiId[String(s.teamId)];
+          if (dbId) {
+            s.teamId = dbId;
+            return s;
+          }
+        }
+
+        // If s.teamName exists, map by name
+        if (s.teamName && teamsByName[s.teamName.toLowerCase()]) {
+          s.teamId = teamsByName[s.teamName.toLowerCase()];
+          return s;
+        }
+
+        // Last attempt: if teamName contains numbers only, treat as apiId and map
+        if (s.teamName && String(s.teamName).match(/^\d+$/) && teamsByApiId[String(s.teamName)]) {
+          s.teamId = teamsByApiId[String(s.teamName)];
+          return s;
+        }
+
+        console.warn(`[sports-sync] Unable to map standing for league ${leagueId}: teamName='${s.teamName}', teamId='${s.teamId}'`);
+        return s;
+      });
+
+      // Filter out any standings that still don't have a teamId (avoid foreign key errors)
+      const validStandings = mappedStandings.filter(s => s.teamId && s.teamId.length > 0);
+      console.log(`[sports-sync] Mapped standings for ${leagueId}: ${validStandings.length}/${standings.length}`);
+      await storage.updateStandings(leagueId, validStandings as any);
 
       console.log(`[sports-sync] Standings sync complete for league ${leagueId}: ${standings.length} teams`);
       res.json({

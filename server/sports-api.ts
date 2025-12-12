@@ -80,24 +80,41 @@ interface TheSportsDBMatch {
 class SportsService {
   private async makeRequest(endpoint: string): Promise<any> {
     const url = `${THE_SPORTS_DB_URL}${endpoint}`;
-    console.log(`[sports-api] Fetching: ${url}`);
+    const maxAttempts = 3;
+    const backoffMs = 500;
+    let attempt = 0;
+    let lastError: any = null;
 
-    const response = await fetch(url);
+    while (attempt < maxAttempts) {
+      try {
+        attempt++;
+        console.log(`[sports-api] Fetching (attempt ${attempt}): ${url}`);
+        const response = await fetch(url);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[sports-api] API Error ${response.status}: ${errorText}`);
-      throw new Error(`TheSportsDB API error: ${response.status} - ${errorText}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[sports-api] API Error ${response.status}: ${errorText}`);
+          throw new Error(`TheSportsDB API error: ${response.status} - ${errorText}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error(`[sports-api] Expected JSON but got: ${contentType}`, text.substring(0, 200));
+          throw new Error(`TheSportsDB API returned non-JSON response: ${contentType}`);
+        }
+
+        return response.json();
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[sports-api] Request attempt ${attempt} failed: ${err.message}`);
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, backoffMs * attempt));
+          continue;
+        }
+        throw lastError;
+      }
     }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error(`[sports-api] Expected JSON but got: ${contentType}`, text.substring(0, 200));
-      throw new Error(`TheSportsDB API returned non-JSON response: ${contentType}`);
-    }
-
-    return response.json();
   }
 
   async fetchLeagues(): Promise<League[]> {
@@ -173,16 +190,39 @@ class SportsService {
     try {
       // Try current season first
       let data;
-      try {
-        data = await this.makeRequest(`/lookuptable.php?l=${leagueId}&s=2024-2025`);
-      } catch (error) {
-        // If current season fails, try previous season
-        console.log(`[sports-api] Current season failed, trying previous season for league ${leagueId}`);
-        data = await this.makeRequest(`/lookuptable.php?l=${leagueId}&s=2023-2024`);
+      // Build a list of seasons to try: current (2025-2026), then previous two
+      const now = new Date();
+      const thisYear = now.getFullYear();
+      const seasonCandidates = [
+        `${thisYear}/${thisYear + 1}`,
+        `${thisYear - 1}/${thisYear}`,
+        `${thisYear - 2}/${thisYear - 1}`,
+      ];
+
+      for (const s of seasonCandidates) {
+        try {
+          data = await this.makeRequest(`/lookuptable.php?l=${leagueId}&s=${s}`);
+          if (data && data.table && data.table.length > 0) {
+            console.log(`[sports-api] Found standings for league ${leagueId} season ${s}`);
+            break;
+          }
+        } catch (err) {
+          console.log(`[sports-api] Season ${s} not available for league ${leagueId}: ${err.message}`);
+        }
       }
 
-      if (!data.table || data.table.length === 0) {
-        console.warn(`[sports-api] No standings found for league ${leagueId}`);
+      if (!data) {
+        console.warn(`[sports-api] No standings data returned for league ${leagueId}`);
+        return [];
+      }
+
+      if (!data.table) {
+        console.warn(`[sports-api] Standings response for league ${leagueId} missing 'table' property. Response keys: ${Object.keys(data).join(', ')}`);
+        return [];
+      }
+
+      if (data.table.length === 0) {
+        console.warn(`[sports-api] No standings rows found for league ${leagueId}`);
         return [];
       }
 
@@ -191,23 +231,41 @@ class SportsService {
         return isNaN(parsed) ? 0 : parsed;
       };
 
-      const standings: Standing[] = data.table.map((standing: TheSportsDBStanding, index: number) => ({
-        id: `${leagueId}_${standing.teamid}_${Date.now()}_${index}`,
-        leagueId: leagueId,
-        teamId: standing.teamid,
-        position: index + 1,
-        playedGames: parseNum(standing.played),
-        form: '', // TheSportsDB doesn't provide form data
-        won: parseNum(standing.win),
-        draw: parseNum(standing.draw),
-        lost: parseNum(standing.loss),
-        points: parseNum(standing.total),
-        goalsFor: parseNum(standing.goalsfor),
-        goalsAgainst: parseNum(standing.goalsagainst),
-        goalDifference: parseNum(standing.goalsdifference),
-        createdAt: new Date(),
-        lastUpdated: new Date()
-      }));
+      const standings: Standing[] = data.table.map((standing: any, index: number) => {
+        const teamIdRaw = standing.teamid || standing.idTeam || standing.id || standing.TeamID || standing.teamId;
+        // Keep external API id separately so we can map to DB ID later
+        const apiTeamId = teamIdRaw ? String(teamIdRaw) : '';
+        const position = parseNum(String(standing.intRank || standing.int_rank || standing.position || standing.rank || index + 1));
+        const playedGames = parseNum(String(standing.intPlayed || standing.int_played || standing.played));
+        const won = parseNum(String(standing.intWin || standing.int_win || standing.win));
+        const draw = parseNum(String(standing.intDraw || standing.int_draw || standing.draw));
+        const lost = parseNum(String(standing.intLoss || standing.int_loss || standing.loss));
+        const points = parseNum(String(standing.intPoints || standing.int_points || standing.total));
+        const goalsFor = parseNum(String(standing.intGoalsFor || standing.int_goals_for || standing.goalsfor));
+        const goalsAgainst = parseNum(String(standing.intGoalsAgainst || standing.int_goals_against || standing.goalsagainst));
+        const goalDifference = parseNum(String(standing.intGoalDifference || standing.int_goal_difference || standing.goalsdifference));
+        const season = standing.strSeason || standing.season || `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`;
+
+        return {
+          id: `${leagueId}_${apiTeamId}_${Date.now()}_${index}`,
+          leagueId: leagueId,
+          apiTeamId,
+          teamName: standing.strTeam || standing.name || '',
+          position,
+          playedGames,
+          form: standing.strForm || standing.form || '',
+          won,
+          draw,
+          lost,
+          points,
+          goalsFor,
+          goalsAgainst,
+          goalDifference,
+          season,
+          createdAt: new Date(),
+          lastUpdated: new Date(),
+        } as Standing;
+      });
 
       console.log(`[sports-api] Fetched ${standings.length} standings for league ${leagueId}`);
       return standings;
