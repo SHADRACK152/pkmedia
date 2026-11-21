@@ -2,9 +2,6 @@
 import { app } from '../server/app.js';
 import { registerRoutes } from '../server/routes.js';
 import { storage } from '../server/storage.js';
-import path from 'node:path';
-import fsSync from 'node:fs';
-import fs from 'node:fs/promises';
 import {
   getCanonicalCategoryPath,
   getCanonicalArticlePath,
@@ -13,21 +10,26 @@ import {
   renderPageMetadata,
 } from '../server/article-page.js';
 
-const publicFile = (name: string) => {
-  const publicDirectories = [
-    path.resolve(import.meta.dirname, '../dist/public'),
-    path.resolve(process.cwd(), 'dist/public'),
-    path.resolve(import.meta.dirname, 'dist/public'),
-  ];
-  const file = publicDirectories
-    .map((directory) => path.join(directory, name))
-    .find((candidate) => fsSync.existsSync(candidate));
+let indexTemplatePromise: Promise<string> | undefined;
 
-  if (!file) {
-    throw new Error(`Built public file ${name} is not available.`);
+function getIndexTemplate(): Promise<string> {
+  if (!indexTemplatePromise) {
+    indexTemplatePromise = (async () => {
+      const host = process.env.VERCEL_URL || 'pkmedia.co.ke';
+      const response = await fetch(`https://${host}/index.html`, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        throw new Error(`Unable to retrieve deployed index.html (${response.status}).`);
+      }
+      return response.text();
+    })().catch((error) => {
+      indexTemplatePromise = undefined;
+      throw error;
+    });
   }
-  return file;
-};
+  return indexTemplatePromise;
+}
 
 // Cache the initialization promise to ensure it only runs once
 let initPromise: Promise<any> | null = null;
@@ -91,9 +93,7 @@ export default async function handler(req: any, res: any) {
       const categories = await storage.getAllCategories();
       const category = getCategoryBySlug(categories, categoryMatch[1]);
       if (!category) {
-        return res
-          .status(404)
-          .sendFile(publicFile('404.html'));
+        return res.status(404).send('Page not found');
       }
 
       const canonicalPath = getCanonicalCategoryPath(category);
@@ -113,10 +113,7 @@ export default async function handler(req: any, res: any) {
 
   if (page) {
     try {
-      const template = await fs.readFile(
-        publicFile('index.html'),
-        'utf8',
-      );
+      const template = await getIndexTemplate();
       return res
         .status(200)
         .type('html')
@@ -145,9 +142,7 @@ export default async function handler(req: any, res: any) {
         article.createdAt.getTime() > now ||
         (article.publishedAt && article.publishedAt.getTime() > now)
       ) {
-        return res
-          .status(404)
-          .sendFile(publicFile('404.html'));
+        return res.status(404).send('Page not found');
       }
 
       const canonicalPath = getCanonicalArticlePath(article);
@@ -155,10 +150,7 @@ export default async function handler(req: any, res: any) {
         return res.redirect(301, canonicalPath);
       }
 
-      const template = await fs.readFile(
-        publicFile('index.html'),
-        'utf8',
-      );
+      const template = await getIndexTemplate();
       return res
         .status(200)
         .type('html')
