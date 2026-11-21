@@ -8,6 +8,7 @@ import passport from "passport";
 import { storage } from "./storage.js";
 import bcrypt from "bcryptjs";
 import { registerRoutes } from "./routes.js";
+import { getDatabaseUrl } from "./database-config.js";
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -27,7 +28,7 @@ app.set("trust proxy", 1);
 
 // Setup session store using Postgres via connect-pg-simple
 const PgSession = connectPgSimple(session as any);
-export const pgPool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+export const pgPool = new pg.Pool({ connectionString: getDatabaseUrl() });
 
 // Handle unexpected errors on idle clients to prevent process crash
 pgPool.on('error', (err) => {
@@ -136,7 +137,12 @@ export default async function runApp(
         username: "admin",
         name: "PKMedia Admin",
         email: "admin@pkmedia.co.ke",
-        password: await bcrypt.hash(process.env.ADMIN_PASSWORD || "Pkmedia@123", 10),
+        password: await bcrypt.hash(
+          process.env.DEFAULT_ADMIN_PASSWORD ||
+            process.env.ADMIN_PASSWORD ||
+            "Pkmedia@123",
+          10,
+        ),
         role: "admin",
       };
       const createdAdmin = await storage.createUser(defaultAdmin as any);

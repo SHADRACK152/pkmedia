@@ -28,7 +28,7 @@ A full-stack news platform built with React, Express, and PostgreSQL. Features a
 
 ### Prerequisites
 - Node.js 20+
-- PostgreSQL database (automatically set up in Replit)
+- A PostgreSQL database (Neon by default)
 
 ### Installation
 
@@ -74,6 +74,7 @@ npm run dev
 
 - The `drizzle` migration script reads `DATABASE_URL`. The server also uses `DATABASE_URL` for database queries and `pg` (a `pg.Pool`) for session storage.
 - For serverless deployments or to reduce connection overhead, consider using `@neondatabase/serverless` or a connection pooler recommended by Neon.
+- Loopback URLs such as `127.0.0.1`, `localhost`, and `::1` are rejected by default so a missing Neon configuration cannot silently switch to a local database. Set `ALLOW_LOCAL_DATABASE=true` only when intentionally developing against local PostgreSQL.
 
 Health check
 

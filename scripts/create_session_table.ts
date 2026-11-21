@@ -1,15 +1,11 @@
 
 import pg from 'pg';
+import { getDatabaseUrl } from '../server/database-config.js';
 const { Pool } = pg;
 
 async function createSessionTable() {
-  if (!process.env.DATABASE_URL) {
-    console.error("DATABASE_URL is not set");
-    process.exit(1);
-  }
-
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: getDatabaseUrl(),
   });
 
   try {

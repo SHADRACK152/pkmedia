@@ -1,5 +1,5 @@
 // Test script to create a short news post
-import fetch from 'node-fetch';
+import 'dotenv/config';
 
 const baseUrl = 'http://localhost:5000';
 
@@ -17,8 +17,13 @@ async function testShortNews() {
   const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'admin123' }),
-    credentials: 'include'
+    body: JSON.stringify({
+      username: 'admin',
+      password:
+        process.env.DEFAULT_ADMIN_PASSWORD ||
+        process.env.ADMIN_PASSWORD ||
+        'Pkmedia@123',
+    }),
   });
 
   if (!loginRes.ok) {
@@ -26,7 +31,16 @@ async function testShortNews() {
     return;
   }
 
-  const cookies = loginRes.headers.get('set-cookie');
+  const setCookies = loginRes.headers.getSetCookie?.() ?? [
+    loginRes.headers.get('set-cookie') || '',
+  ];
+  const cookies = setCookies
+    .map((cookie) => cookie.split(';', 1)[0])
+    .filter(Boolean)
+    .join('; ');
+  if (!cookies) {
+    throw new Error('Login succeeded but no session cookie was returned.');
+  }
   console.log('Login successful!');
 
   // 3. Create a test short news post
