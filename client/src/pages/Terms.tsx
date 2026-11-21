@@ -1,8 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, Link as LinkIcon } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export default function Terms() {
   return (
+    <>
+    <SEO
+      title="Terms of Service - PKMedia"
+      description="Review the terms and conditions for using PKMedia's website and services."
+      canonicalUrl="https://pkmedia.co.ke/terms"
+    />
     <main className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4">
         <header className="max-w-3xl mx-auto text-center mb-8">
@@ -47,5 +54,6 @@ export default function Terms() {
         </div>
       </div>
     </main>
+    </>
   );
 }

@@ -2,10 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExternalLink, Calendar, DollarSign } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { SEO } from "@/components/SEO";
 
 export default function Funders() {
   return (
     <>
+      <SEO
+        title="Project Funders and Grants - PKMedia"
+        description="See PKMedia's project funding disclosures and editorial independence commitments."
+        canonicalUrl="https://pkmedia.co.ke/funders"
+      />
       <Navbar />
       <main className="min-h-screen bg-gray-50 py-12">
         <div className="container mx-auto px-4 max-w-5xl">

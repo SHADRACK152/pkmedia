@@ -7,7 +7,7 @@ import BreakingNewsTicker from "@/components/layout/Ticker";
 import ShortNewsFeed from "@/components/news/ShortNewsFeed";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ChevronRight, TrendingUp, FileText, Search } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Article, Category } from "@shared/schema";
 import ArticleCard from "@/components/news/ArticleCard";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,7 @@ import { SEO } from "@/components/SEO";
 import SearchComponent from "@/components/SearchComponent";
 
 export default function Home() {
+  const [location] = useLocation();
   const [activeCategory, setActiveCategory] = useState("All");
   const [visibleCount, setVisibleCount] = useState(6);
   const [newsletterEmail, setNewsletterEmail] = useState("");
@@ -33,6 +34,39 @@ export default function Home() {
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
+
+  useEffect(() => {
+    const categoryMatch = location.match(/^\/category\/([^/]+)\/?$/);
+    if (!categoryMatch) {
+      setActiveCategory("All");
+      return;
+    }
+
+    let categorySlug: string;
+    try {
+      categorySlug = decodeURIComponent(categoryMatch[1])
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .trim();
+    } catch {
+      setActiveCategory("");
+      return;
+    }
+    if (categorySlug === "tech") categorySlug = "technology";
+
+    const category = categories.find((item) => {
+      const itemSlug = item.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .trim();
+      return itemSlug === categorySlug;
+    });
+    setActiveCategory(category?.name || "");
+  }, [location, categories]);
 
   // Always show the most recent article in hero section
   const featuredArticle = [...articles].sort((a, b) => {
@@ -99,7 +133,19 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex flex-col font-sans">
-      <SEO />
+      <SEO
+        title={
+          activeCategory === "All"
+            ? undefined
+            : `${activeCategory} News - PKMedia`
+        }
+        description={
+          activeCategory === "All"
+            ? undefined
+            : `Read the latest ${activeCategory} news and reporting from PKMedia.`
+        }
+        canonicalUrl={`https://pkmedia.co.ke${location.split("?")[0]}`}
+      />
       <BreakingNewsTicker />
       <Navbar />
       
@@ -111,7 +157,11 @@ export default function Home() {
       <main className="flex-1 container mx-auto px-4 py-10">
         
         {/* Hidden H1 for SEO */}
-        <h1 className="sr-only">PKMedia - Kenya and Worldwide News | Breaking News & Current Affairs</h1>
+        <h1 className="sr-only">
+          {activeCategory === "All"
+            ? "PKMedia - Kenya and Worldwide News | Breaking News & Current Affairs"
+            : `${activeCategory} News - PKMedia`}
+        </h1>
         
         {/* Hero Section - Magazine Style */}
         {activeCategory === "All" && featuredArticle && (

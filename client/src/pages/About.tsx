@@ -2,10 +2,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Info, Users, Globe, CheckCircle, Clock, Megaphone, MapPin, Mail, Scale } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { SEO } from "@/components/SEO";
 
 export default function About() {
   return (
     <>
+      <SEO
+        title="About PKMedia - Independent News from Kenya"
+        description="Learn about PKMedia, an independent Nairobi-based news organisation reporting on Kenya, Africa and the world."
+        canonicalUrl="https://pkmedia.co.ke/about"
+      />
       <Navbar />
       <main className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4">

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Article, Category } from "@shared/schema";
+import { SEO } from "@/components/SEO";
 
 export default function Archive() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,6 +32,11 @@ export default function Archive() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <SEO
+        title="Kenya News Archive - PKMedia"
+        description="Browse PKMedia's latest and archived news reporting from Kenya and around the world."
+        canonicalUrl="https://pkmedia.co.ke/archive"
+      />
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8">

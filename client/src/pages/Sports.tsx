@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Trophy, Users } from "lucide-react";
 import StandingsTable from "@/components/sports/StandingsTable";
 import { League, Match, Team } from "@shared/schema";
+import { SEO } from "@/components/SEO";
 
 export default function Sports() {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>("");
@@ -66,6 +67,12 @@ export default function Sports() {
     .slice(0, 10);
 
   return (
+    <>
+    <SEO
+      title="Kenya and World Sports News - PKMedia"
+      description="Follow sports news, league standings, teams and match updates from PKMedia."
+      canonicalUrl="https://pkmedia.co.ke/sports"
+    />
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Sports</h1>
@@ -208,5 +215,6 @@ export default function Sports() {
         </TabsContent>
       </Tabs>
     </div>
+    </>
   );
 }

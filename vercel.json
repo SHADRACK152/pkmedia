@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "api/index.ts": {
-      "includeFiles": "{server/**,shared/**,uploads/**}"
+      "includeFiles": "{server/**,shared/**,uploads/**,dist/public/index.html,dist/public/404.html}"
     }
   },
   "rewrites": [
@@ -27,7 +27,67 @@
       "destination": "/api/index.ts"
     },
     {
-      "source": "/(.*)",
+      "source": "/article/:slug",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/archive",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/category/:category",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/about",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/funders",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/contact",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/terms",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/unsubscribe",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/sports",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/admin/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/chat",
       "destination": "/index.html"
     }
   ]

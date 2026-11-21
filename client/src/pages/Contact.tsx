@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Mail, Phone, MapPin, Users, Megaphone } from "lucide-react";
 import { useState } from "react";
+import { SEO } from "@/components/SEO";
 
 export default function Contact() {
   const [name, setName] = useState("");
@@ -45,6 +46,12 @@ export default function Contact() {
   }
 
   return (
+    <>
+    <SEO
+      title="Contact PKMedia"
+      description="Contact PKMedia with news tips, press enquiries, corrections and general questions."
+      canonicalUrl="https://pkmedia.co.ke/contact"
+    />
     <main className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4">
         <header className="max-w-3xl mx-auto text-center mb-8">
@@ -184,5 +191,6 @@ export default function Contact() {
         </div>
       </div>
     </main>
+    </>
   );
 }

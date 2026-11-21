@@ -1,8 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield, Link as LinkIcon } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export default function Privacy() {
   return (
+    <>
+    <SEO
+      title="Privacy Policy - PKMedia"
+      description="Read how PKMedia collects, uses and protects visitor information and personal data."
+      canonicalUrl="https://pkmedia.co.ke/privacy"
+    />
     <main className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4">
         <header className="max-w-3xl mx-auto text-center mb-8">
@@ -47,5 +54,6 @@ export default function Privacy() {
         </div>
       </div>
     </main>
+    </>
   );
 }

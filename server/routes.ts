@@ -14,6 +14,16 @@ import express from "express";
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import os from "os";
+import { getArticleSlug } from "./article-page.js";
+
+const PUBLIC_SITE_URL = "https://pkmedia.co.ke";
+const escapeXml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 
 // Configure Cloudinary
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
@@ -1716,10 +1726,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Sitemap XML endpoint
-  app.get("/sitemap.xml", async (req, res) => {
+  app.get("/sitemap.xml", async (_req, res) => {
     try {
       const articles = await storage.getAllArticles();
-      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+      const categories = await storage.getAllCategories();
+      const baseUrl = PUBLIC_SITE_URL;
       
       const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -1760,38 +1771,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
+  <url>
+    <loc>${baseUrl}/archive</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/sports</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+${categories.map(category => `  <url>
+    <loc>${baseUrl}/category/${encodeURIComponent(category.name)}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('\n')}
   
   <!-- Articles -->
 ${articles.map(article => {
-  const slug = article.title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim()
-    .substring(0, 60);
+  const slug = getArticleSlug(article.title);
   
   const articleUrl = `${baseUrl}/article/${slug}__${article.id}`;
-  const publishDate = new Date(article.createdAt || Date.now()).toISOString();
-  const isRecent = (Date.now() - new Date(article.createdAt || 0).getTime()) < 2 * 24 * 60 * 60 * 1000; // 2 days
+  const publishDate = new Date(article.publishedAt || article.createdAt || Date.now()).toISOString();
+  const modifiedDate = new Date(article.updatedAt || article.publishedAt || article.createdAt || Date.now()).toISOString();
+  const isRecent = (Date.now() - new Date(article.publishedAt || article.createdAt || 0).getTime()) < 2 * 24 * 60 * 60 * 1000;
   
   return `  <url>
-    <loc>${articleUrl}</loc>
-    <lastmod>${publishDate}</lastmod>
+    <loc>${escapeXml(articleUrl)}</loc>
+    <lastmod>${modifiedDate}</lastmod>
     <changefreq>${isRecent ? 'hourly' : 'weekly'}</changefreq>
     <priority>${article.featured ? '0.9' : '0.8'}</priority>
     ${article.image ? `<image:image>
-      <image:loc>${article.image.startsWith('http') ? article.image : baseUrl + article.image}</image:loc>
-      <image:title>${article.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</image:title>
+      <image:loc>${escapeXml(article.image.startsWith('http') ? article.image : baseUrl + article.image)}</image:loc>
+      <image:title>${escapeXml(article.title)}</image:title>
     </image:image>` : ''}
-    <news:news>
+    ${isRecent ? `<news:news>
       <news:publication>
         <news:name>PKMedia - Kenya and Worldwide News</news:name>
         <news:language>en</news:language>
       </news:publication>
       <news:publication_date>${publishDate}</news:publication_date>
-      <news:title>${article.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</news:title>
-    </news:news>
+      <news:title>${escapeXml(article.title)}</news:title>
+    </news:news>` : ''}
   </url>`;
 }).join('\n')}
   
@@ -1806,30 +1827,16 @@ ${articles.map(article => {
   });
 
   // Robots.txt endpoint
-  app.get("/robots.txt", (req, res) => {
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  app.get("/robots.txt", (_req, res) => {
+    const baseUrl = PUBLIC_SITE_URL;
     const robots = `User-agent: *
 Allow: /
-
-# Sitemap
-Sitemap: ${baseUrl}/sitemap.xml
-
-# Disallow admin pages
-User-agent: *
-Disallow: /admin
 Disallow: /api/
+Disallow: /admin
 Disallow: /login
 Disallow: /register
 
-# Allow Google and other major search engines full access
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Slurp
-Allow: /`;
+Sitemap: ${baseUrl}/sitemap.xml`;
 
     res.header('Content-Type', 'text/plain');
     res.send(robots);
