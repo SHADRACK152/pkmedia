@@ -3,6 +3,7 @@ import { app } from '../server/app.js';
 import { registerRoutes } from '../server/routes.js';
 import { storage } from '../server/storage.js';
 import path from 'node:path';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import {
   getCanonicalCategoryPath,
@@ -11,6 +12,22 @@ import {
   renderArticlePage,
   renderPageMetadata,
 } from '../server/article-page.js';
+
+const publicFile = (name: string) => {
+  const publicDirectories = [
+    path.resolve(import.meta.dirname, '../dist/public'),
+    path.resolve(process.cwd(), 'dist/public'),
+    path.resolve(import.meta.dirname, 'dist/public'),
+  ];
+  const file = publicDirectories
+    .map((directory) => path.join(directory, name))
+    .find((candidate) => fsSync.existsSync(candidate));
+
+  if (!file) {
+    throw new Error(`Built public file ${name} is not available.`);
+  }
+  return file;
+};
 
 // Cache the initialization promise to ensure it only runs once
 let initPromise: Promise<any> | null = null;
@@ -76,7 +93,7 @@ export default async function handler(req: any, res: any) {
       if (!category) {
         return res
           .status(404)
-          .sendFile(path.resolve(process.cwd(), 'dist/public/404.html'));
+          .sendFile(publicFile('404.html'));
       }
 
       const canonicalPath = getCanonicalCategoryPath(category);
@@ -97,7 +114,7 @@ export default async function handler(req: any, res: any) {
   if (page) {
     try {
       const template = await fs.readFile(
-        path.resolve(process.cwd(), 'dist/public/index.html'),
+        publicFile('index.html'),
         'utf8',
       );
       return res
@@ -130,7 +147,7 @@ export default async function handler(req: any, res: any) {
       ) {
         return res
           .status(404)
-          .sendFile(path.resolve(process.cwd(), 'dist/public/404.html'));
+          .sendFile(publicFile('404.html'));
       }
 
       const canonicalPath = getCanonicalArticlePath(article);
@@ -139,7 +156,7 @@ export default async function handler(req: any, res: any) {
       }
 
       const template = await fs.readFile(
-        path.resolve(process.cwd(), 'dist/public/index.html'),
+        publicFile('index.html'),
         'utf8',
       );
       return res
