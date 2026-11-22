@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { Menu, Search, User, X, MessageCircle, Clock, TrendingUp } from "lucide-react";
+import { Menu, Search, User, X, MessageCircle, Clock, TrendingUp, Archive } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { Category, Article } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { getArticleImageSources } from "@/lib/article-images";
 export default function Navbar() {
   const [location, setLocation] = useLocation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Article[]>([]);
@@ -110,97 +111,243 @@ export default function Navbar() {
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Sports", href: "/sports" },
-    ...categories.slice(0, 5).map(c => ({ name: c.name, href: `/category/${c.name}` }))
+    ...categories
+      .filter((category) => category.name.toLowerCase() !== "sports")
+      .slice(0, 5)
+      .map(category => ({ name: category.name, href: `/category/${category.name}` }))
   ];
+  const isActive = (href: string) =>
+    href === "/" ? location === "/" : location === href || location.startsWith(`${href}/`);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-nav">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        
-        {/* Mobile Menu */}
-        <div className="md:hidden">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left">
-              <nav className="flex flex-col gap-4 mt-8">
-                {navLinks.map((link) => (
-                  <Link key={link.name} href={link.href} className={`text-lg font-medium ${location === link.href ? 'text-primary' : 'text-foreground'}`}>
-                      {link.name}
-                  </Link>
-                ))}
-                {/* Admin login link intentionally hidden from regular users. Admins navigate to /admin/login directly when needed. */}
-              </nav>
-            </SheetContent>
-          </Sheet>
-        </div>
-
-        {/* Logo (uses /pklogo.png if available in client/public) */}
-            <Link href="/" className="flex items-center gap-2">
-            <img src="/pklogo.png" alt="PKMedia logo" className="h-8 w-auto rounded-sm" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-            <span className="font-serif font-bold text-xl hidden sm:block text-accent-blue-dark">
-              PK<span className="text-accent-blue">Media</span>
-            </span>
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 xl:px-8">
+        <div className="flex h-[68px] items-center justify-between gap-3 sm:h-[76px]">
+          <Link
+            href="/"
+            onClick={() => {
+              closeMobileMenu();
+              setIsSearchOpen(false);
+            }}
+            className="flex shrink-0 items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <img
+              src="/pklogo.png"
+              alt="PKMedia home"
+              className="h-9 w-auto object-contain sm:h-11"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
           </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-8">
-                {navLinks.map((link) => (
-            <Link key={link.name} href={link.href} className={`text-sm font-semibold uppercase tracking-wide hover:text-primary transition-colors ${location === link.href ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
-              {link.name}
-            </Link>
-          ))}
-        </nav>
+          <nav aria-label="Main navigation" className="hidden min-w-0 flex-1 items-center justify-center gap-0 lg:flex">
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`whitespace-nowrap rounded-full px-2 py-2 text-sm font-semibold transition-colors ${
+                    active
+                      ? "bg-blue-50 text-primary"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          <NotificationSubscribe />
-          <Button variant="ghost" size="icon" onClick={() => setIsSearchOpen(!isSearchOpen)}>
-            <Search className="h-5 w-5" />
-          </Button>
-          <Link href="/chat">
-            <Button variant="ghost" size="icon" title="Chat">
-              <MessageCircle className="h-5 w-5" />
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <NotificationSubscribe compact />
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={isSearchOpen ? "Close search" : "Open search"}
+              aria-expanded={isSearchOpen}
+              title={isSearchOpen ? "Close search" : "Search"}
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+            >
+              <Search className="h-5 w-5" />
             </Button>
-          </Link>
-          {/* Chat floating button is rendered globally in App - removed from Navbar */}
+
+            <Link
+              href="/chat"
+              aria-label="Open chat"
+              title="Chat"
+              className="hidden h-9 w-9 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 lg:flex"
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Link>
+
             {!user && (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="hidden sm:inline">Login</Button>
+              <div className="hidden items-center gap-2 lg:flex">
+                <Link
+                  href="/login"
+                  className="rounded-full px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
+                >
+                  Log in
                 </Link>
-                <Link href="/register">
-                  <Button variant="ghost" size="sm" className="hidden sm:inline">Register</Button>
+                <Link
+                  href="/register"
+                  className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+                >
+                  Register
                 </Link>
-              </>
+              </div>
             )}
 
             {user && (
-              <>
-                <Link href="/settings">
-                  <Button variant="ghost" size="sm" className="hidden sm:inline">Settings</Button>
+              <div className="hidden items-center gap-1 lg:flex">
+                <Link
+                  href="/settings"
+                  aria-label="Account settings"
+                  title="Account settings"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
+                >
+                  <User className="h-5 w-5" />
                 </Link>
-                {/* Show Admin Dashboard link only for admin users */}
                 {(user as any).role === 'admin' && (
-                  <Link href="/admin/dashboard">
-                    <Button variant="ghost" size="icon" title="Admin Dashboard">
-                      <User className="h-5 w-5" />
-                    </Button>
+                  <Link
+                    href="/admin/dashboard"
+                    aria-label="Admin dashboard"
+                    title="Admin dashboard"
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950"
+                  >
+                    <TrendingUp className="h-5 w-5" />
                   </Link>
                 )}
-              </>
+              </div>
             )}
+
+            <div className="lg:hidden">
+              <Sheet
+                open={isMobileMenuOpen}
+                onOpenChange={(open) => {
+                  setIsMobileMenuOpen(open);
+                  if (open) setIsSearchOpen(false);
+                }}
+              >
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Open navigation menu"
+                    aria-expanded={isMobileMenuOpen}
+                    className="rounded-full text-slate-700 hover:bg-slate-100"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="flex w-[88vw] max-w-sm flex-col gap-0 border-slate-200 bg-white p-0">
+                  <SheetHeader className="border-b border-slate-100 px-5 py-5 pr-14 text-left">
+                    <Link href="/" onClick={closeMobileMenu} className="inline-flex w-fit rounded-md">
+                      <img src="/pklogo.png" alt="PKMedia home" className="h-10 w-auto object-contain" />
+                    </Link>
+                    <SheetTitle className="sr-only">Navigation menu</SheetTitle>
+                    <SheetDescription className="sr-only">Browse PKMedia sections and account links.</SheetDescription>
+                  </SheetHeader>
+
+                  <div className="flex-1 overflow-y-auto px-4 py-5">
+                    <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Sections</p>
+                    <nav aria-label="Mobile navigation" className="space-y-1">
+                      {navLinks.map((link) => {
+                        const active = isActive(link.href);
+                        return (
+                          <Link
+                            key={link.name}
+                            href={link.href}
+                            onClick={closeMobileMenu}
+                            aria-current={active ? "page" : undefined}
+                            className={`flex items-center rounded-xl px-3 py-3 text-sm font-semibold transition-colors ${
+                              active
+                                ? "bg-blue-50 text-primary"
+                                : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
+                            }`}
+                          >
+                            {link.name}
+                          </Link>
+                        );
+                      })}
+                    </nav>
+
+                    <div className="mt-6 border-t border-slate-100 pt-5">
+                      <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">More</p>
+                      <Link
+                        href="/archive"
+                        onClick={closeMobileMenu}
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                      >
+                        <Archive className="h-4 w-4 text-slate-400" />
+                        News archive
+                      </Link>
+                      <Link
+                        href="/chat"
+                        onClick={closeMobileMenu}
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                      >
+                        <MessageCircle className="h-4 w-4 text-slate-400" />
+                        Chat
+                      </Link>
+                      {user ? (
+                        <>
+                          <Link
+                            href="/settings"
+                            onClick={closeMobileMenu}
+                            className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            <User className="h-4 w-4 text-slate-400" />
+                            Account settings
+                          </Link>
+                          {(user as any).role === 'admin' && (
+                            <Link
+                              href="/admin/dashboard"
+                              onClick={closeMobileMenu}
+                              className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                            >
+                              <TrendingUp className="h-4 w-4 text-slate-400" />
+                              Admin dashboard
+                            </Link>
+                          )}
+                        </>
+                      ) : (
+                        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4">
+                          <Link
+                            href="/login"
+                            onClick={closeMobileMenu}
+                            className="rounded-xl border border-slate-200 px-3 py-2.5 text-center text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            Log in
+                          </Link>
+                          <Link
+                            href="/register"
+                            onClick={closeMobileMenu}
+                            className="rounded-xl bg-primary px-3 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                          >
+                            Register
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 bg-slate-50 px-5 py-4 text-xs text-slate-500">
+                    Accurate news across Kenya, Africa and the world.
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
         </div>
       </div>
-      
-      {/* Search Bar Expand */}
+
       {isSearchOpen && (
-        <div className="border-t bg-white shadow-lg animate-in slide-in-from-top-2">
-          <div className="container mx-auto max-w-3xl p-6">
-            <div className="flex gap-3 mb-4">
+        <div className="animate-in slide-in-from-top-2 border-t border-slate-100 bg-white shadow-xl">
+          <div className="mx-auto max-w-3xl px-4 py-4 sm:p-6">
+            <div className="mb-4 flex gap-2 sm:gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
                 <input 
@@ -208,7 +355,8 @@ export default function Navbar() {
                   value={searchQuery}
                   onChange={handleSearchChange}
                   placeholder="Search articles by title, content, or category..." 
-                  className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-base"
+                  aria-label="Search articles"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-base outline-none transition focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/20"
                   autoFocus
                 />
               </div>
@@ -221,6 +369,7 @@ export default function Navbar() {
                   setSearchResults([]);
                 }}
                 className="rounded-xl"
+                aria-label="Close search"
               >
                 <X className="h-5 w-5" />
               </Button>

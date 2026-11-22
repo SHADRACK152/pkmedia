@@ -3,7 +3,11 @@ import { Bell, BellOff } from 'lucide-react';
 import { Button } from './button';
 import { useToast } from '@/hooks/use-toast';
 
-export default function NotificationSubscribe() {
+interface NotificationSubscribeProps {
+  compact?: boolean;
+}
+
+export default function NotificationSubscribe({ compact = false }: NotificationSubscribeProps) {
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -206,18 +210,20 @@ export default function NotificationSubscribe() {
       onClick={isSubscribed ? unsubscribeFromNotifications : subscribeToNotifications}
       disabled={loading}
       variant={isSubscribed ? 'outline' : 'default'}
-      size="sm"
-      className="gap-2"
+      size={compact ? 'icon' : 'sm'}
+      className={compact ? 'rounded-full' : 'gap-2'}
+      aria-label={isSubscribed ? 'Disable notifications' : 'Enable notifications'}
+      title={isSubscribed ? 'Disable notifications' : 'Enable notifications'}
     >
       {isSubscribed ? (
         <>
           <BellOff className="h-4 w-4" />
-          Notifications On
+          {!compact && 'Notifications On'}
         </>
       ) : (
         <>
           <Bell className="h-4 w-4" />
-          Enable Notifications
+          {!compact && 'Enable Notifications'}
         </>
       )}
     </Button>
