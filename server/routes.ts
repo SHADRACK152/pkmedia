@@ -24,6 +24,14 @@ const escapeXml = (value: string) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+const getSitemapImageUrl = (image: string, baseUrl: string): string | undefined => {
+  try {
+    const url = new URL(image.trim(), baseUrl);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 // Configure Cloudinary
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
@@ -1795,14 +1803,15 @@ ${articles.map(article => {
   const publishDate = new Date(article.publishedAt || article.createdAt || Date.now()).toISOString();
   const modifiedDate = new Date(article.updatedAt || article.publishedAt || article.createdAt || Date.now()).toISOString();
   const isRecent = (Date.now() - new Date(article.publishedAt || article.createdAt || 0).getTime()) < 2 * 24 * 60 * 60 * 1000;
+  const imageUrl = article.image ? getSitemapImageUrl(article.image, baseUrl) : undefined;
   
   return `  <url>
     <loc>${escapeXml(articleUrl)}</loc>
     <lastmod>${modifiedDate}</lastmod>
     <changefreq>${isRecent ? 'hourly' : 'weekly'}</changefreq>
     <priority>${article.featured ? '0.9' : '0.8'}</priority>
-    ${article.image ? `<image:image>
-      <image:loc>${escapeXml(article.image.startsWith('http') ? article.image : baseUrl + article.image)}</image:loc>
+    ${imageUrl ? `<image:image>
+      <image:loc>${escapeXml(imageUrl)}</image:loc>
       <image:title>${escapeXml(article.title)}</image:title>
     </image:image>` : ''}
     ${isRecent ? `<news:news>
