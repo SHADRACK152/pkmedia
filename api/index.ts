@@ -15,7 +15,9 @@ let indexTemplatePromise: Promise<string> | undefined;
 function getIndexTemplate(): Promise<string> {
   if (!indexTemplatePromise) {
     indexTemplatePromise = (async () => {
-      const host = process.env.VERCEL_URL || 'pkmedia.co.ke';
+      const host = process.env.VERCEL_ENV === 'production'
+        ? 'pkmedia.co.ke'
+        : process.env.VERCEL_URL || 'pkmedia.co.ke';
       const response = await fetch(`https://${host}/index.html`, {
         signal: AbortSignal.timeout(10_000),
       });

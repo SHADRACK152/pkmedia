@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import CommentSection from "@/components/news/CommentSection";
 import ShareButtons from "@/components/news/ShareButtons";
 import { Helmet } from 'react-helmet-async';
-import { extractIdFromSlug } from "@/lib/utils";
+import { createArticleSlug, extractIdFromSlug } from "@/lib/utils";
 import { SEO } from "@/components/SEO";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -198,12 +198,12 @@ export default function ArticlePage() {
     );
   }
 
-  const articleUrl = `/article/${slug}`;
+  const articleUrl = `/article/${createArticleSlug(article.title, article.id)}`;
   const articleDescription = article.content ? article.content.replace(/<[^>]*>/g, '').substring(0, 160) : '';
   const absoluteImageUrl = article.image?.startsWith('http') 
     ? article.image 
     : `${typeof window !== 'undefined' ? window.location.origin : ''}${article.image}`;
-  const absoluteUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${articleUrl}`;
+  const absoluteUrl = `https://pkmedia.co.ke${articleUrl}`;
 
   // Generate JSON-LD structured data for Google News
   const structuredData = {
@@ -212,8 +212,8 @@ export default function ArticlePage() {
     "headline": article.title,
     "description": articleDescription,
     "image": absoluteImageUrl,
-    "datePublished": article.createdAt,
-    "dateModified": article.updatedAt || article.createdAt,
+    "datePublished": article.publishedAt || article.createdAt,
+    "dateModified": article.updatedAt || article.publishedAt || article.createdAt,
     "author": {
       "@type": "Person",
       "name": article.author
@@ -242,8 +242,8 @@ export default function ArticlePage() {
         description={articleDescription}
         image={absoluteImageUrl}
         article={true}
-        publishedTime={article.createdAt}
-        modifiedTime={article.updatedAt || article.createdAt}
+        publishedTime={article.publishedAt || article.createdAt}
+        modifiedTime={article.updatedAt || article.publishedAt || article.createdAt}
         author={article.author}
         canonicalUrl={absoluteUrl}
         keywords={article.tags?.join(', ') || article.category}
@@ -267,7 +267,7 @@ export default function ArticlePage() {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content={article.title} />
-        <meta property="article:published_time" content={article.createdAt} />
+        <meta property="article:published_time" content={article.publishedAt || article.createdAt} />
         <meta property="article:author" content={article.author} />
         <meta property="article:section" content={article.category} />
         

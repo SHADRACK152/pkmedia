@@ -378,6 +378,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!article) {
         return res.status(404).json({ error: "Article not found" });
       }
+      const now = Date.now();
+      if (
+        article.status !== "published" ||
+        article.createdAt.getTime() > now ||
+        (article.publishedAt && article.publishedAt.getTime() > now)
+      ) {
+        return res.status(404).json({ error: "Article not found" });
+      }
       res.json(article);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1844,6 +1852,8 @@ Disallow: /api/
 Disallow: /admin
 Disallow: /login
 Disallow: /register
+Disallow: /settings
+Disallow: /chat
 
 Sitemap: ${baseUrl}/sitemap.xml`;
 
