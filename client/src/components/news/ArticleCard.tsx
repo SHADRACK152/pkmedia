@@ -4,6 +4,7 @@ import { Clock, User, ArrowRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { getArticleImageSources } from "@/lib/article-images";
 
 interface ArticleCardProps {
   article: Article;
@@ -33,7 +34,15 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
     return url.match(/\.(mp4|webm|mov)$/i) || url.includes('/video/upload/');
   };
 
-  const MediaContent = ({ className }: { className: string }) => {
+  const MediaContent = ({
+    className,
+    priority = false,
+    sizes,
+  }: {
+    className: string;
+    priority?: boolean;
+    sizes: string;
+  }) => {
     if (isVideo(article.image)) {
       return (
         <video
@@ -41,18 +50,23 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
           muted
           loop
           playsInline
-          loading="lazy"
+          preload="none"
           onMouseOver={(e) => e.currentTarget.play()}
           onMouseOut={(e) => e.currentTarget.pause()}
           className={className}
         />
       );
     }
+    const imageSources = getArticleImageSources(article.image);
     return (
       <img 
-        src={article.image} 
+        src={imageSources.src}
+        srcSet={imageSources.srcSet}
+        sizes={sizes}
         alt={article.title} 
-        loading="lazy"
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
         className={className}
       />
     );
@@ -63,7 +77,11 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
       <Link href={articleUrl}>
         <div className="group block h-full w-full relative overflow-hidden rounded-xl shadow-2xl cursor-pointer bg-slate-900">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/90 z-10" />
-          <MediaContent className="w-full h-[550px] object-cover transition-transform duration-1000 group-hover:scale-105 opacity-90" />
+          <MediaContent
+            className="w-full h-[550px] object-cover transition-transform duration-1000 group-hover:scale-105 opacity-90"
+            priority
+            sizes="(min-width: 1280px) 1200px, 100vw"
+          />
           
           <div className="absolute bottom-0 left-0 p-6 md:p-10 z-20 w-full">
             <div className="max-w-4xl">
@@ -95,7 +113,10 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
     return (
       <Link href={articleUrl}>
         <div className="group block h-full relative overflow-hidden rounded-xl shadow-lg cursor-pointer">
-          <MediaContent className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          <MediaContent
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            sizes="(min-width: 1280px) 1200px, 100vw"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
           <div className="absolute bottom-0 left-0 p-6 text-white z-10">
             <Badge className="mb-2 bg-primary/90 hover:bg-primary border-none text-white text-xs">
@@ -120,7 +141,7 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
       <Link href={articleUrl}>
         <div className="group flex gap-4 items-start p-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer">
           <div className="w-20 h-20 shrink-0 rounded-md overflow-hidden relative bg-slate-200">
-             <MediaContent className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+             <MediaContent className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" sizes="80px" />
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-[10px] font-bold text-primary uppercase tracking-wider mb-1 block">
@@ -144,7 +165,10 @@ export default function ArticleCard({ article, variant = "default" }: ArticleCar
       <div className="block h-full group hover:-translate-y-2 transition-all duration-300 cursor-pointer">
         <Card className="h-full border-0 shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col bg-white">
           <div className="aspect-[16/10] w-full overflow-hidden relative bg-slate-100">
-            <MediaContent className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            <MediaContent
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            />
             <div className="absolute top-3 left-3 z-10">
               <Badge variant="secondary" className="bg-white backdrop-blur hover:bg-white text-slate-900 shadow-lg font-bold text-xs uppercase tracking-wide">
                 {article.category}

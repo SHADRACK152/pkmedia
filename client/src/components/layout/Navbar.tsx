@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Category, Article } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import NotificationSubscribe from "@/components/ui/notification-subscribe";
+import { getArticleImageSources } from "@/lib/article-images";
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
@@ -243,9 +244,12 @@ export default function Navbar() {
                       >
                         <div className="flex gap-3">
                           {article.image && (
-                            <img 
-                              src={article.image} 
+                            <img
+                              {...getArticleImageSources(article.image)}
                               alt={article.title}
+                              sizes="80px"
+                              loading="lazy"
+                              decoding="async"
                               className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                             />
                           )}

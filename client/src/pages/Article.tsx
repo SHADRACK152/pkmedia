@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Clock, User, ChevronLeft, Eye, ThumbsUp, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CommentSection from "@/components/news/CommentSection";
 import ShareButtons from "@/components/news/ShareButtons";
 import { Helmet } from 'react-helmet-async';
 import { createArticleSlug, extractIdFromSlug } from "@/lib/utils";
+import { getArticleImageSources, optimizeArticleContentImages } from "@/lib/article-images";
 import { SEO } from "@/components/SEO";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -37,6 +38,10 @@ export default function ArticlePage() {
   const [subscriber, setSubscriber] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [id]);
 
   // Check user authentication
   useEffect(() => {
@@ -104,6 +109,10 @@ export default function ArticlePage() {
     queryKey: [`/api/articles/${id}`],
     enabled: !!id && id !== 'undefined',
   });
+  const optimizedArticleContent = useMemo(
+    () => article?.content ? optimizeArticleContentImages(article.content) : "",
+    [article?.content],
+  );
 
   // Slideshow effect for images
   useEffect(() => {
@@ -204,6 +213,9 @@ export default function ArticlePage() {
     ? article.image 
     : `${typeof window !== 'undefined' ? window.location.origin : ''}${article.image}`;
   const absoluteUrl = `https://pkmedia.co.ke${articleUrl}`;
+  const articleImages = [article.image, ...(article.images || [])].filter(Boolean);
+  const activeImageIndex = articleImages.length ? currentIndex % articleImages.length : 0;
+  const activeImage = articleImages[activeImageIndex];
 
   // Generate JSON-LD structured data for Google News
   const structuredData = {
@@ -290,34 +302,31 @@ export default function ArticlePage() {
         {(article.image || (article.images && article.images.length > 0)) && (
           <div className="relative w-full">
             <div className="relative w-full aspect-[21/9] md:aspect-[21/8] bg-slate-100 overflow-hidden group">
-              {[article.image, ...(article.images || [])].filter(Boolean).map((img, index) => (
-                <div
-                  key={index}
-                  className={`absolute inset-0 transition-opacity duration-1000 ${
-                    index === currentIndex ? 'opacity-100' : 'opacity-0'
-                  }`}
-                >
-                  {isVideo(img) ? (
-                    <video
-                      src={img}
-                      controls
-                      autoPlay
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <img 
-                      src={img} 
-                      alt={`${article.title} - Image ${index + 1}`} 
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                </div>
-              ))}
+              <div key={activeImageIndex} className="absolute inset-0 animate-in fade-in duration-700">
+                {isVideo(activeImage) ? (
+                  <video
+                    src={activeImage}
+                    controls
+                    autoPlay
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img
+                    {...getArticleImageSources(activeImage)}
+                    alt={`${article.title} - Image ${activeImageIndex + 1}`}
+                    sizes="100vw"
+                    loading="eager"
+                    fetchPriority={activeImageIndex === 0 ? "high" : "auto"}
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
               
               {/* Slideshow indicators */}
-              {[article.image, ...(article.images || [])].filter(Boolean).length > 1 && (
+              {articleImages.length > 1 && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                  {[article.image, ...(article.images || [])].filter(Boolean).map((_, index) => (
+                  {articleImages.map((_, index) => (
                     <button
                       key={index}
                       onClick={() => setCurrentIndex(index)}
@@ -412,7 +421,7 @@ export default function ArticlePage() {
         <article className="prose prose-lg prose-blue max-w-none font-serif text-foreground/80">
           <div 
             className="article-content leading-relaxed text-lg"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: optimizedArticleContent }}
           />
         </article>
 
